@@ -78,7 +78,3 @@ class StatFaster extends Model
 }
 
 ```
-
-
-
-See [clientOptions](http://ckeditor.com/#/example)
