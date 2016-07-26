@@ -1,0 +1,33 @@
+
+{
+    "name": "kak/clickhouse",
+    "description": "ClickHouse for Yii2",
+    "type": "yii2-extension",
+    "keywords": ["yii2","ClickHouse","ClickHouse ActiveRecord Yii2"],
+    "license": "MIT",
+    "support": {
+        "issues": "https://github.com/sanchezzzhak/kak-clickhouse/issues?state=open",
+        "source": "https://github.com/sanchezzzhak/kak-clickhouse"
+    },
+    "authors": [
+        {
+            "name": "Tutik Alexsandr",
+            "email": "sanchezzzhak@ya.ru"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": "*",
+        "yiisoft/yii2-httpclient": "2.0.0.1"
+    },
+    "extra": {
+        "asset-installer-paths": {
+            "npm-asset-library": "vendor/npm",
+            "bower-asset-library": "vendor/bower"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "kak\\clickhouse\\": ""
+        }
+    }
+}
