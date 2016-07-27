@@ -43,7 +43,7 @@ to the require section of your composer.json
 		// insert data ORM
 		$client->createCommand(null)
 			->insert('stat', [
-				'event_data' => date('Y-m-d')
+				'event_data' => date('Y-m-d'),
 				'counter_id' => 122
 			])
 			->execute();
@@ -72,9 +72,10 @@ class StatFaster extends Model
 		$client->createCommand(null)
 			->insert('stat', $attributes )
 			->execute();	
-		
 	}
 
 }
 
 ```
+## TODO
+ActiveRecord + ActiveQuery (processing)

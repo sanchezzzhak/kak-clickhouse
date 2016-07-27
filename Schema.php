@@ -71,6 +71,9 @@ class Schema extends \yii\db\Schema
      */
     protected function loadColumnSchema($info)
     {
+
+
+
         $column = $this->createColumnSchema();
         $column->name = $info['name'];
         $column->dbType = $info['type'];
@@ -88,6 +91,34 @@ class Schema extends \yii\db\Schema
                 $column->defaultValue = $info['default_expression'];
         }
         return $column;
+    }
+
+    /**
+     * Executes the INSERT command, returning primary key values.
+     * @param string $table the table that new rows will be inserted into.
+     * @param array $columns the column data (name => value) to be inserted into the table.
+     * @return array primary key values or false if the command fails
+     * @since 2.0.4
+     */
+    public function insert($table, $columns)
+    {
+        $columns = $this->hardTypeCastValue($table,$columns);
+        return parent::insert($table, $columns);
+    }
+
+    /**
+     * ClickHouse Strong typing data cast
+     * @param $table
+     * @param $columns
+     * @return mixed
+     */
+    protected function hardTypeCastValue($table,$columns)
+    {
+        $tableSchema = $this->getTableSchema($table);
+        foreach($columns as $name => $value){
+            $columns[$name] = $tableSchema->columns[$name]->phpTypecast($value);
+        }
+        return $columns;
     }
 
     /**

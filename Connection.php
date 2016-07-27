@@ -260,6 +260,10 @@ class Connection extends Component
         $this->trigger(self::EVENT_AFTER_OPEN);
     }
 
+    /**
+     * @return object|\kak\clickhouse\Schema
+     * @throws \yii\base\InvalidConfigException
+     */
     public function getSchema()
     {
         return $this->_schema = Yii::createObject([
