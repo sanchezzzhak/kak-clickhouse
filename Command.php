@@ -4,6 +4,7 @@ namespace kak\clickhouse;
 use yii\base\Component;
 use Yii;
 use yii\base\Exception;
+use yii\helpers\ArrayHelper;
 use yii\helpers\Json;
 
 class Command extends Component
@@ -224,8 +225,7 @@ class Command extends Component
     protected function parseJson($content)
     {
         $json = Json::decode($content);
-
-        return $json;
+        return ArrayHelper::getValue($json,'data');
     }
 
 
