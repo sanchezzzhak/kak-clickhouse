@@ -113,13 +113,18 @@ class Command extends Component
            ->setMethod('POST')
            ->setContent($rawSql)
            ->send();
-
        return !$raw ? $response : $this->parseResponse($response);
     }
 
     public function queryAll($fetchMode = null)
     {
         return $this->queryInternal('fetchAll', $fetchMode);
+    }
+
+
+    public function queryOne($fetchMode = null)
+    {
+        return $this->queryInternal('fetch', $fetchMode);
     }
 
     public function getRawSql()
@@ -156,6 +161,12 @@ class Command extends Component
     protected function queryInternal($method, $fetchMode = null)
     {
         $rawSql = $this->getRawSql();
+        if($method == 'fetch') {
+            if(preg_match('#^SELECT#is',$rawSql) && !preg_match('#LIMIT#is',$rawSql)){
+                $rawSql.=' LIMIT 1';
+            }
+        }
+
         \Yii::info($rawSql, 'kak\clickhouse\Command::query');
 
         if ($method !== '') {
@@ -178,6 +189,8 @@ class Command extends Component
                 }
             }
         }
+
+
         $token = $rawSql;
         try {
             Yii::beginProfile($token, 'kak\clickhouse\Command::query');
@@ -258,13 +271,13 @@ class Command extends Component
     public function batchInsert($table, $columns, $rows)
     {
 
+
+
+       // return $this->db->transport->batchSend($requests);
+
        // return $this->setSql($sql);
     }
 
-    public function queryOne($fetchMode = null)
-    {
-        return $this->queryInternal('fetch', $fetchMode);
-    }
 
 
 }
