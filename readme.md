@@ -53,7 +53,7 @@ Save custom model
 ```php
 
 use yii\base\Model;
-class StatFaster extends Model
+class Stat extends Model
 {
     public $event_date; // Date;
     public $counter_id  = 0; // Int32,
@@ -75,7 +75,28 @@ class StatFaster extends Model
 	}
 
 }
+```
+
+
+## ActiveRecord model
 
 ```
-## TODO
-ActiveRecord + ActiveQuery (processing)
+class Stat extends \kak\clickhouse\ActiveRecord 
+{
+	
+    public static function tableName()
+    {
+        return 'stat';
+    }
+    
+    // use relation in mysql
+    
+    public function getUser()
+    {
+    	return $this->hasOne(User::className(),['id' => 'user_id']);
+    }
+
+}
+
+
+@TODO ActiveQuery, QueryBuilder, Gii, tab profile panel
