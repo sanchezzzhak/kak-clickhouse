@@ -30,8 +30,27 @@ class Command extends Component
 
     private $_sql;
 
+    private $_format = null;
     private $_pendingParams = [];
 
+
+    /**
+     * @return null
+     */
+    public function getFormat()
+    {
+        return $this->_format;
+    }
+
+    /**
+     * @param null $format
+     * @return $this
+     */
+    public function setFormat($format)
+    {
+        $this->_format = $format;
+        return $this;
+    }
 
     /**
      * Enables query cache for this command.
@@ -166,6 +185,9 @@ class Command extends Component
                 $rawSql.=' LIMIT 1';
             }
         }
+        if($this->getFormat()===null && strpos($rawSql,'FORMAT ')===false){
+            $rawSql.=' FORMAT JSON';
+        }
 
         \Yii::info($rawSql, 'kak\clickhouse\Command::query');
 
@@ -190,8 +212,8 @@ class Command extends Component
             }
         }
 
-
         $token = $rawSql;
+
         try {
             Yii::beginProfile($token, 'kak\clickhouse\Command::query');
 
@@ -204,7 +226,7 @@ class Command extends Component
             if($response->getStatusCode() == 500 ) {
                 throw new Exception($response->content);
             }
-            $result = $this->parseResponse($response);
+            $result = $this->parseResponse($response,$method);
 
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
         } catch (\Exception $e) {
@@ -219,7 +241,7 @@ class Command extends Component
      * @param \yii\httpclient\Response $response
      * @return mixed|array
      */
-    public function parseResponse(\yii\httpclient\Response $response)
+    public function parseResponse(\yii\httpclient\Response $response, $method = null)
     {
         $contentType = $response
             ->getHeaders()
@@ -231,8 +253,12 @@ class Command extends Component
         $hash = [
             'application/json' => 'parseJson'
         ];
+        $result = (isset($hash[$type]))? $this->{$hash[$type]}($response->content) : $response->content;
 
-        return (isset($hash[$type]))? $this->{$hash[$type]}($response->content) : $response->content;
+        if($method == 'fetch') {
+            return is_array($result) ? array_shift($result): $result;
+        }
+        return  $result;
     }
 
     protected function parseJson($content)
