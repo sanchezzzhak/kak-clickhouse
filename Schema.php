@@ -47,7 +47,7 @@ class Schema extends \yii\db\Schema
     {
 
         $sql = 'SELECT * FROM system.columns WHERE table=:name FORMAT JSON';
-        $result = ArrayHelper::getValue($this->db->createCommand($sql,[':name' => $name ])->queryAll(),'data');
+        $result = $this->db->createCommand($sql,[':name' => $name ])->queryAll();
 
         if($result && isset($result[0])) {
             $table = new TableSchema();
@@ -61,6 +61,7 @@ class Schema extends \yii\db\Schema
             }
             return $table;
         }
+
         return null;
     }
 

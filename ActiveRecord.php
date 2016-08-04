@@ -30,16 +30,13 @@ class ActiveRecord extends BaseActiveRecord
      */
     public static function getTableSchema()
     {
-        $tableSchema = static::getDb()
-            ->getSchema()
-            ->getTableSchema(static::tableName());
-
+        $tableSchema = static::getDb()->getSchema()->getTableSchema(static::tableName());
         if ($tableSchema === null) {
             throw new InvalidConfigException('The table does not exist: ' . static::tableName());
         }
-
         return $tableSchema;
     }
+
 
     /**
      * Returns the list of all attribute names of the model.

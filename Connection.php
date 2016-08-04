@@ -13,6 +13,7 @@ use Yii;
  */
 class Connection extends Component
 {
+    public $tablePrefix;
     /**
      * @event Event an event that is triggered after a DB connection is established
      */
@@ -272,6 +273,15 @@ class Connection extends Component
         ]);
     }
 
+    public function quoteTableName($name)
+    {
+        return $name;
+    }
+
+    public function quoteColumnName($name)
+    {
+        return $name;
+    }
     /**
      * Returns the query builder for the current DB connection.
      * @return QueryBuilder the query builder for the current DB connection.
