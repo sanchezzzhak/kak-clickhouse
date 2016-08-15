@@ -294,15 +294,65 @@ class Command extends Component
         return $this->setSql($sql)->bindValues($params);
     }
 
+    /**
+     * @param $table
+     * @param null $columns
+     * @param array $files
+     * @param string $format
+     * @return \yii\httpclient\Response[]
+     */
+    public function batchInsertFiles($table,$columns = null, $files = [], $format = 'CSV' )
+    {
+        $schemaColumns = $this->db->getSchema()->getTableSchema($table)->columns;
+        if($columns ===null){
+            $columns = $this->db->getSchema()->getTableSchema($table)->columnNames;
+        }
+
+        $structure = [];
+        foreach($columns as $column){
+            $structure[] = $column . ' ' . $schemaColumns[$column]->dbType;
+        }
+
+        $sql =  'INSERT INTO '
+            . $this->db->getSchema()->quoteTableName($table)
+            . ' (' . implode(', ', $columns)
+            . ') FORMAT ' .$format;
+
+
+        $requests = [];
+        foreach($files as $file){
+            $request = $this->db->transport->createRequest();
+            $request->setData([
+                'query' => $sql,
+                $table.'_structure' => implode(',',$structure),
+            ]);
+            $request->setMethod('post');
+            $request->addFile($table, $file);
+            $requests[] = $request;
+        }
+        $responses = $this->db->transport->batchSend($requests);
+
+        return $responses;
+    }
+
+    /**
+     * Creates a batch INSERT command.
+     * For example,
+     *
+     * ```php
+     * $connection->createCommand()->batchInsert('user', ['name', 'age'], [
+     *     ['Tom', 30],
+     *     ['Jane', 20],
+     *     ['Linda', 25],
+     * ])->execute();
+     * ```
+     */
     public function batchInsert($table, $columns, $rows)
     {
-
-
-
-       // return $this->db->transport->batchSend($requests);
-
-       // return $this->setSql($sql);
+        $sql = $this->db->getQueryBuilder()->batchInsert($table, $columns, $rows);
+        return $this->setSql($sql);
     }
+
 
 
 

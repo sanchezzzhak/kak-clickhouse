@@ -155,6 +155,20 @@ class Connection extends Component
         ]);
     }
 
+    public function buildUrl($url,$data = [])
+    {
+        $parsed = parse_url($url);
+        isset($parsed['query']) ? parse_str($parsed['query'], $parsed['query']) : $parsed['query'] = [];
+        $params = isset($parsed['query']) ? array_merge($parsed['query'], $data) : $data;
+        $parsed['query'] = ($params) ? '?' . http_build_query($params) : '';
+        if (!isset($parsed['path']))
+            $parsed['path'] = '/';
+
+        $scheme = isset($parsed['scheme']) ? $parsed['scheme']: 'http';
+        return $scheme. '://' . $parsed['host'] . $parsed['path'] . $parsed['query'];
+    }
+
+
     /**
      * Returns the current query cache information.
      * This method is used internally by [[Command]].
@@ -227,6 +241,7 @@ class Connection extends Component
             ->send();
         return trim($response->content) == '1';
     }
+
 
     /**
      * Closes the connection when this component is being serialized.
