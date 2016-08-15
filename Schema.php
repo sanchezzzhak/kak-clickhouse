@@ -65,6 +65,7 @@ class Schema extends \yii\db\Schema
         return null;
     }
 
+
     /**
      * Loads the column information into a [[ColumnSchema]] object.
      * @param array $info column information
@@ -73,16 +74,14 @@ class Schema extends \yii\db\Schema
     protected function loadColumnSchema($info)
     {
 
-
-
         $column = $this->createColumnSchema();
         $column->name = $info['name'];
         $column->dbType = $info['type'];
         $column->type = isset($this->typeMap[$column->dbType ]) ? $this->typeMap[$column->dbType]  : self::TYPE_STRING;
 
         if (preg_match('/^([\w ]+)(?:\(([^\)]+)\))?$/', $column->dbType, $matches)) {
-            $type = strtolower($matches[1]);
-            $column->dbType = $type . (isset($matches[2]) ? "({$matches[2]})" : '');
+            $type = $matches[1];
+            $column->dbType = $matches[1] . (isset($matches[2]) ? "({$matches[2]})" : '');
             if (isset($this->typeMap[$type])) {
                 $column->type = $this->typeMap[$type];
             }
