@@ -4,10 +4,12 @@ namespace kak\clickhouse;
 use yii\base\Component;
 use Yii;
 use yii\base\Exception;
+use yii\db\Command as BaseCommand;
+use yii\db\Exception as DbException;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Json;
 
-class Command extends Component
+class Command extends BaseCommand
 {
     /*** @var Connection */
     public $db;
@@ -132,7 +134,16 @@ class Command extends Component
            ->setMethod('POST')
            ->setContent($rawSql)
            ->send();
-       return !$raw ? $response : $this->parseResponse($response);
+
+        if ($raw) {
+            return $this->parseResponse($response);
+        } else {
+            /** Raise exception when get 500s error */
+            if ($response->statusCode >= 500) {
+                throw new DbException($response->getContent());
+            }
+            return $response;
+        }
     }
 
     public function queryAll($fetchMode = null)
@@ -352,8 +363,4 @@ class Command extends Component
         $sql = $this->db->getQueryBuilder()->batchInsert($table, $columns, $rows);
         return $this->setSql($sql);
     }
-
-
-
-
 }

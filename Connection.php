@@ -11,7 +11,7 @@ use Yii;
  * @package app\helpers\clickhouse
  * @property \yii\httpclient\Client $transport
  */
-class Connection extends Component
+class Connection extends \yii\db\Connection
 {
     public $tablePrefix;
     /**
