@@ -15,11 +15,11 @@ class Schema extends \yii\db\Schema
         'UInt8' => self::TYPE_SMALLINT,
         'UInt16'=> self::TYPE_INTEGER,
         'UInt32'=> self::TYPE_INTEGER,
-        'UInt64'=> self::TYPE_INTEGER,
+        'UInt64'=> self::TYPE_BIGINT,
         'Int8'=> self::TYPE_SMALLINT,
         'Int16'=> self::TYPE_INTEGER,
         'Int32'=> self::TYPE_INTEGER,
-        'Int64'=> self::TYPE_INTEGER,
+        'Int64'=> self::TYPE_BIGINT,
         'Float32'=> self::TYPE_FLOAT,
         'Float64' => self::TYPE_FLOAT,
         'String' => self::TYPE_STRING,
@@ -162,4 +162,12 @@ class Schema extends \yii\db\Schema
         return strpos($name, '`') !== false || $name === '*' ? $name : '`' . $name . '`';
     }
 
+
+    /**
+     * @inheritdoc
+     */
+    public function createColumnSchemaBuilder($type, $length = null)
+    {
+        return new ColumnSchemaBuilder($type, $length, $this->db);
+    }
 }
