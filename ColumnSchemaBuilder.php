@@ -19,10 +19,10 @@ class ColumnSchemaBuilder extends BaseColumnSchemaBuilder
     {
         switch ($this->getTypeCategory()) {
             case self::CATEGORY_NUMERIC:
-                $format = '{unsigned}{type}';
+                $format = '{unsigned}{type}{default}';
                 break;
             default:
-                $format = '{type}';
+                $format = '{type}{default}';
         }
 
         return $this->buildCompleteString($format);
