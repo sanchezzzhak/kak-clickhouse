@@ -51,9 +51,13 @@ class QueryBuilder extends BaseQueryBuilder
 
         if (isset($this->typeMap[$type])) {
             return $this->typeMap[$type];
+        } elseif (preg_match('/^(\w+)\s+/', $type, $matches)) {
+            if (isset($this->typeMap[$matches[1]])) {
+                return preg_replace('/^\w+/', $this->typeMap[$matches[1]], $type);
+            }
         } elseif (preg_match('/^U(\w+)/', $type, $matches)) {
             if (isset($this->typeMap[$matches[1]])) {
-                return 'U'. $this->typeMap[$matches[1]];
+                return 'U' . $this->typeMap[$matches[1]];
             }
         }
 
