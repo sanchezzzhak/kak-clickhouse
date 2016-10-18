@@ -1,7 +1,7 @@
 <?php
 namespace kak\clickhouse;
 use yii\base\InvalidConfigException;
-use yii\db\BaseActiveRecord;
+use yii\db\ActiveRecord as BaseActiveRecord;
 use Yii;
 use yii\db\TableSchema;
 use yii\helpers\Inflector;
