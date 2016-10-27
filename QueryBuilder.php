@@ -1,7 +1,6 @@
 <?php
 namespace kak\clickhouse;
 
-
 use yii\db\QueryBuilder as BaseQueryBuilder;
 
 class QueryBuilder extends BaseQueryBuilder

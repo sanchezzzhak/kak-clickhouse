@@ -80,7 +80,7 @@ class Stat extends Model
 
 ## ActiveRecord model
 
-```
+```php
 class Stat extends \kak\clickhouse\ActiveRecord 
 {
 	
@@ -97,6 +97,25 @@ class Stat extends \kak\clickhouse\ActiveRecord
     }
 
 }
+
+Using Gii generator
+===================
+```php
+return [
+    //....
+    'modules' => [
+        // ...
+        'gii' => [
+            'class' => 'yii\gii\Module',
+            'generators' => [
+                'clickhouseDbModel' => [
+                    'class' => 'kak\clickhouse\gii\model\Generator'
+                ]
+            ],
+        ],
+    ]
+];
+```
 
 
 @TODO ActiveQuery, QueryBuilder, Gii, tab profile panel
