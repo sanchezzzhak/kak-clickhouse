@@ -31,7 +31,7 @@ class <?= $className ?> extends <?= '\\' . ltrim($generator->baseClass, '\\') . 
     */
     public static function tableName()
     {
-        return '<?= $collectionName ?>'
+        return '<?= $collectionName ?>';
     }
 
     /**
