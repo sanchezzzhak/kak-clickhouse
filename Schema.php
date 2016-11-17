@@ -114,6 +114,14 @@ class Schema extends \yii\db\Schema
         return new ColumnSchemaBuilder($type, $length, $this->db);
     }
 
+    public function quoteValue($str)
+    {
+        if (!is_string($str)) {
+            return $str;
+        }
+        return "'" . addcslashes(str_replace("'", "''", $str), "\000\n\r\\\032") . "'";
+    }
+
     /**
      * @param string $schema
      * @return array
