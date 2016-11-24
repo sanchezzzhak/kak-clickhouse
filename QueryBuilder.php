@@ -63,5 +63,23 @@ class QueryBuilder extends BaseQueryBuilder
         return $type;
     }
 
+    /**
+     * @param integer $limit
+     * @param integer $offset
+     * @return string the LIMIT and OFFSET clauses
+     */
+    public function buildLimit($limit, $offset)
+    {
+        $sql = '';
+        if ($this->hasLimit($limit)) {
+            $sql = 'LIMIT ' . $limit;
+        }
+        if ($this->hasOffset($offset)) {
+            $sql .= ' , ' . $offset;
+        }
+
+        return ltrim($sql);
+    }
+
 
 }
