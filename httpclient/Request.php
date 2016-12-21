@@ -21,7 +21,7 @@ class Request extends \yii\httpclient\Request
      */
     private function afterPrepareUrl()
     {
-        $url = $this->getUrl();
+        $url = $this->getFullUrl();
         if (strpos($url,'?') !== false) {
             $url = trim($url,'/');
             $this->setUrl($url);
