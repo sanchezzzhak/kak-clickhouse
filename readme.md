@@ -96,6 +96,7 @@ class Stat extends \kak\clickhouse\ActiveRecord
     	return $this->hasOne(User::className(),['id' => 'user_id']);
     }
 }
+```
 
 Using Gii generator
 ===================
