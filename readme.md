@@ -16,13 +16,14 @@ or add
 to the require section of your composer.json
 
 
-## Configuration
+## Configuration example
 ```php  
    'components' => [
         'clickhouse' => [
             'class' => 'kak\clickhouse\Connection',
             'dsn' => '127.0.0.1',
             'port' => '8123',
+           // 'database' => 'default',  // use other database name
             'username' => 'web',
             'password' => '123',
         ],
@@ -31,22 +32,21 @@ to the require section of your composer.json
 
 ## Usage
 ```php    
-	   /** @var \kak\clickhouse\Connection $client */
-		$client = \Yii::$app->clickhouse;
-		
-		$sql = 'select * from stat where counter_id=:counter_id';
-		$client->createCommand($sql,[
-			':counter_id' => 122
-		])->queryAll();
-	
-			
-		// insert data ORM
-		$client->createCommand(null)
-			->insert('stat', [
-				'event_data' => date('Y-m-d'),
-				'counter_id' => 122
-			])
-			->execute();
+   /** @var \kak\clickhouse\Connection $client */
+    $client = \Yii::$app->clickhouse;
+    $sql = 'select * from stat where counter_id=:counter_id';
+    $client->createCommand($sql,[
+        ':counter_id' => 122
+    ])->queryAll();
+
+
+    // insert data ORM
+    $client->createCommand(null)
+    ->insert('stat', [
+        'event_data' => date('Y-m-d'),
+        'counter_id' => 122
+    ])
+    ->execute();
 			
 ```
 Save custom model 
@@ -89,13 +89,12 @@ class Stat extends \kak\clickhouse\ActiveRecord
         return 'stat';
     }
     
-    // use relation in mysql
+    // use relation in mysql (Only with, do not use joinWith)
     
     public function getUser()
     {
     	return $this->hasOne(User::className(),['id' => 'user_id']);
     }
-
 }
 
 Using Gii generator
@@ -117,5 +116,12 @@ return [
 ];
 ```
 
+Official ClickHouse docs
+===================
+https://clickhouse.yandex/reference_en.html
 
-@TODO ActiveQuery, QueryBuilder, Gii, tab profile panel
+
+Summary of recommendations insert data
+===================
+1 Accumulated data and insert at one time, it will reduce the operations io disk
+2 @todo how that will add...
