@@ -84,6 +84,7 @@ class Connection extends \yii\db\Connection
     public $commandClass   = 'kak\clickhouse\Command';
     public $schemaClass    = 'kak\clickhouse\Schema';
     public $transportClass = 'yii\httpclient\CurlTransport';
+    public $requestClass = 'kak\clickhouse\httpclient\Request';
 
 
     /** @var bool|Client */
@@ -148,10 +149,12 @@ class Connection extends \yii\db\Connection
         if(count($params)){
             $url.= '?' . http_build_query($params);
         }
-
         $this->_transport = new Client([
             'baseUrl'   => $url,
-            'transport' => $this->transportClass
+            'transport' => $this->transportClass,
+            'requestConfig' => [
+                'class' => $this->requestClass,
+            ]
         ]);
     }
 
@@ -161,11 +164,16 @@ class Connection extends \yii\db\Connection
         isset($parsed['query']) ? parse_str($parsed['query'], $parsed['query']) : $parsed['query'] = [];
         $params = isset($parsed['query']) ? array_merge($parsed['query'], $data) : $data;
         $parsed['query'] = ($params) ? '?' . http_build_query($params) : '';
-        if (!isset($parsed['path']))
+        if (!isset($parsed['path'])) {
             $parsed['path'] = '/';
-
-        $scheme = isset($parsed['scheme']) ? $parsed['scheme']: 'http';
-        return $scheme. '://' . $parsed['host'] . $parsed['path'] . $parsed['query'];
+        }
+        $defaultScheme = 'http';
+        return (isset($parsed['scheme']) ? $parsed['scheme'] : $defaultScheme)
+        . '://'
+        . $parsed['host']
+        . (!empty($parsed['port']) ? ':' . $parsed['port'] : '')
+        . $parsed['path']
+        . $parsed['query'];
     }
 
 
