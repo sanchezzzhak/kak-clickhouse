@@ -116,7 +116,7 @@ return [
 ];
 ```
 
-Official ClickHouse docs
+ClickHouse Reference Manual
 ===================
 https://clickhouse.yandex/reference_en.html
 
