@@ -71,11 +71,11 @@ class QueryBuilder extends BaseQueryBuilder
     public function buildLimit($limit, $offset)
     {
         $sql = '';
-        if ($this->hasLimit($limit)) {
-            $sql = 'LIMIT ' . $limit;
-        }
         if ($this->hasOffset($offset)) {
-            $sql .= ' , ' . $offset;
+            $sql .= 'LIMIT ' . $offset . ' , ' . $limit;
+        }
+        else if ($this->hasLimit($limit)) {
+            $sql = 'LIMIT ' . $limit;
         }
 
         return ltrim($sql);
