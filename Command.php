@@ -234,7 +234,7 @@ class Command extends BaseCommand
                 ->setContent($rawSql)
                 ->send();
 
-            if($response->getStatusCode() == 500 ) {
+            if($response->getStatusCode() != 200 ) {
                 throw new Exception($response->content);
             }
             $result = $this->parseResponse($response,$method);
@@ -275,7 +275,7 @@ class Command extends BaseCommand
     protected function parseJson($content)
     {
         $json = Json::decode($content);
-        return ArrayHelper::getValue($json,'data');
+        return ArrayHelper::getValue($json,'data',[]);
     }
 
 
