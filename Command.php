@@ -295,9 +295,6 @@ class Command extends BaseCommand
     public function queryScalar()
     {
         $result = $this->queryInternal('fetchScalar', 0);
-        if (is_resource($result) && get_resource_type($result) === 'stream') {
-            return stream_get_contents($result);
-        }
         return (is_numeric($result)) ? ( $result + 0 ) : $result;
     }
 
