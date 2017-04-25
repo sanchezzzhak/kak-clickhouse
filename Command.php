@@ -154,7 +154,7 @@ class Command extends BaseCommand
         return $this->queryInternal('fetch', $fetchMode);
     }
 
-    public function queryColumn($fetchMode = null)
+    public function queryColumn()
     {
         return $this->queryInternal('fetchColumn');
     }
