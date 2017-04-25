@@ -1,5 +1,6 @@
 <?php
 namespace kak\clickhouse;
+
 use yii\base\Component;
 
 use yii\caching\Cache;
@@ -143,10 +144,10 @@ class Connection extends \yii\db\Connection
         $url =  $scheme. '://' . $auth . $this->dsn. ':' . $this->port;
 
         $params = [];
-        if(!empty($this->database)){
+        if (!empty($this->database)) {
             $params['database'] = $this->database;
         }
-        if(count($params)){
+        if (count($params)) {
             $url.= '?' . http_build_query($params);
         }
         $this->_transport = new Client([
@@ -158,7 +159,7 @@ class Connection extends \yii\db\Connection
         ]);
     }
 
-    public function buildUrl($url,$data = [])
+    public function buildUrl($url, $data = [])
     {
         $parsed = parse_url($url);
         isset($parsed['query']) ? parse_str($parsed['query'], $parsed['query']) : $parsed['query'] = [];
@@ -313,6 +314,4 @@ class Connection extends \yii\db\Connection
     {
         return $this->getSchema()->getQueryBuilder();
     }
-
-
 }

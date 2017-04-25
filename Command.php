@@ -1,6 +1,7 @@
 <?php
 
 namespace kak\clickhouse;
+
 use yii\base\Component;
 use Yii;
 use yii\base\Exception;
@@ -137,7 +138,7 @@ class Command extends BaseCommand
 
         $this->checkResponseStatus($response);
 
-        if ($raw){
+        if ($raw) {
             return $this->parseResponse($response);
         }
         return $response;
@@ -151,6 +152,16 @@ class Command extends BaseCommand
     public function queryOne($fetchMode = null)
     {
         return $this->queryInternal('fetch', $fetchMode);
+    }
+
+    public function queryColumn($fetchMode = null)
+    {
+        return $this->queryInternal('fetchColumn');
+    }
+
+    public function queryScalar()
+    {
+        return $this->queryInternal('fetchScalar');
     }
 
     public function getRawSql()
@@ -187,12 +198,12 @@ class Command extends BaseCommand
     protected function queryInternal($method, $fetchMode = null)
     {
         $rawSql = $this->getRawSql();
-        if($method == 'fetch') {
-            if(preg_match('#^SELECT#is',$rawSql) && !preg_match('#LIMIT#is',$rawSql)){
+        if ($method == 'fetch') {
+            if (preg_match('#^SELECT#is', $rawSql) && !preg_match('#LIMIT#is', $rawSql)) {
                 $rawSql.=' LIMIT 1';
             }
         }
-        if($this->getFormat()===null && strpos($rawSql,'FORMAT ')===false){
+        if ($this->getFormat()===null && strpos($rawSql, 'FORMAT ')===false) {
             $rawSql.=' FORMAT JSON';
         }
 
@@ -231,8 +242,7 @@ class Command extends BaseCommand
                 ->send();
 
             $this->checkResponseStatus($response);
-
-            $result = $this->parseResponse($response,$method);
+            $result = $this->parseResponse($response, $method);
 
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
         } catch (\Exception $e) {
@@ -249,7 +259,7 @@ class Command extends BaseCommand
      */
     public function checkResponseStatus($response)
     {
-        if($response->getStatusCode() != 200 ) {
+        if ($response->getStatusCode() != 200) {
             throw new DbException($response->getContent());
         }
     }
@@ -266,7 +276,7 @@ class Command extends BaseCommand
             ->getHeaders()
             ->get('Content-Type');
 
-        list($type) = explode(';',$contentType);
+        list($type) = explode(';', $contentType);
 
         $type = strtolower($type);
         $hash = [
@@ -274,16 +284,28 @@ class Command extends BaseCommand
         ];
         $result = (isset($hash[$type]))? $this->{$hash[$type]}($response->content) : $response->content;
 
-        if($method == 'fetch') {
-            return is_array($result) ? array_shift($result): $result;
+        switch ($method) {
+            case 'fetchColumn':
+                return array_map(function ($a) {
+                    return array_values($a)[0];
+                }, $result);
+            break;
+            case 'fetchScalar':
+                return array_values($result[0])[0];
+            break;
+            case 'fetch':
+                return is_array($result) ? array_shift($result): $result;
+            default:
+            return  $result;
         }
-        return  $result;
+        if ($method == 'fetch') {
+        }
     }
 
     protected function parseJson($content)
     {
         $json = Json::decode($content);
-        return ArrayHelper::getValue($json,'data',[]);
+        return ArrayHelper::getValue($json, 'data', []);
     }
 
 
@@ -320,15 +342,15 @@ class Command extends BaseCommand
      * @param string $format
      * @return \yii\httpclient\Response[]
      */
-    public function batchInsertFiles($table,$columns = null, $files = [], $format = 'CSV' )
+    public function batchInsertFiles($table, $columns = null, $files = [], $format = 'CSV')
     {
         $schemaColumns = $this->db->getSchema()->getTableSchema($table)->columns;
-        if($columns ===null){
+        if ($columns ===null) {
             $columns = $this->db->getSchema()->getTableSchema($table)->columnNames;
         }
 
         $structure = [];
-        foreach($columns as $column){
+        foreach ($columns as $column) {
             $structure[] = $column . ' ' . $schemaColumns[$column]->dbType;
         }
 
@@ -339,11 +361,11 @@ class Command extends BaseCommand
 
 
         $requests = [];
-        foreach($files as $file){
+        foreach ($files as $file) {
             $request = $this->db->transport->createRequest();
             $request->setData([
                 'query' => $sql,
-                $table.'_structure' => implode(',',$structure),
+                $table.'_structure' => implode(',', $structure),
             ]);
             $request->setMethod('post');
             $request->addFile($table, $file);
