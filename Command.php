@@ -184,6 +184,7 @@ class Command extends BaseCommand
     }
 
 
+
     protected function queryInternal($method, $fetchMode = null)
     {
         $rawSql = $this->getRawSql();
@@ -277,7 +278,27 @@ class Command extends BaseCommand
         if($method == 'fetch') {
             return is_array($result) ? array_shift($result): $result;
         }
+        if($method == 'fetchScalar' && array_key_exists(0,$result)) {
+            return current($result[0]);
+        }
+
         return  $result;
+    }
+
+    /**
+     * Executes the SQL statement and returns the value of the first column in the first row of data.
+     * This method is best used when only a single value is needed for a query.
+     * @return string|null|false the value of the first column in the first row of the query result.
+     * False is returned if there is no value.
+     * @throws Exception execution failed
+     */
+    public function queryScalar()
+    {
+        $result = $this->queryInternal('fetchScalar', 0);
+        if (is_resource($result) && get_resource_type($result) === 'stream') {
+            return stream_get_contents($result);
+        }
+        return (is_numeric($result)) ? ( $result + 0 ) : $result;
     }
 
     protected function parseJson($content)
