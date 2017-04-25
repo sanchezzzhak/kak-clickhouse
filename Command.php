@@ -14,9 +14,9 @@ class Command extends BaseCommand
 {
     /*** @var Connection */
     public $db;
-
+    
     public $params = [];
-
+    
     /**
      * @var integer the default number of seconds that query results can remain valid in cache.
      * Use 0 to indicate that the cached data will never expire. And use a negative number to indicate
@@ -29,14 +29,14 @@ class Command extends BaseCommand
      * @see cache()
      */
     public $queryCacheDependency;
-
-
+    
+    
     private $_sql;
-
+    
     private $_format = null;
     private $_pendingParams = [];
-
-
+    
+    
     /**
      * @return null
      */
@@ -44,7 +44,7 @@ class Command extends BaseCommand
     {
         return $this->_format;
     }
-
+    
     /**
      * @param null $format
      * @return $this
@@ -54,7 +54,7 @@ class Command extends BaseCommand
         $this->_format = $format;
         return $this;
     }
-
+    
     /**
      * Enables query cache for this command.
      * @param integer $duration the number of seconds that query result of this command can remain valid in the cache.
@@ -69,7 +69,7 @@ class Command extends BaseCommand
         $this->queryCacheDependency = $dependency;
         return $this;
     }
-
+    
     /**
      * Disables query cache for this command.
      * @return $this the command object itself
@@ -79,7 +79,7 @@ class Command extends BaseCommand
         $this->queryCacheDuration = -1;
         return $this;
     }
-
+    
     /**
      * Returns the SQL statement for this command.
      * @return string the SQL statement to be executed
@@ -88,7 +88,7 @@ class Command extends BaseCommand
     {
         return $this->_sql;
     }
-
+    
     /**
      * Specifies the SQL statement to be executed.
      * The previous SQL execution (if any) will be cancelled, and [[params]] will be cleared as well.
@@ -104,15 +104,15 @@ class Command extends BaseCommand
         }
         return $this;
     }
-
-
-
+    
+    
+    
     public function bindValues($values)
     {
         if (empty($values)) {
             return $this;
         }
-
+        
         //$schema = $this->db->getSchema();
         foreach ($values as $name => $value) {
             if (is_array($value)) {
@@ -122,11 +122,11 @@ class Command extends BaseCommand
                 $this->params[$name] = $value;
             }
         }
-
+        
         return $this;
     }
-
-
+    
+    
     public function execute($raw = false)
     {
         $rawSql = $this->getRawSql();
@@ -135,35 +135,43 @@ class Command extends BaseCommand
             ->setMethod('POST')
             ->setContent($rawSql)
             ->send();
-
+        
         $this->checkResponseStatus($response);
-
+        
         if ($raw) {
             return $this->parseResponse($response);
         }
         return $response;
     }
-
+    
     public function queryAll($fetchMode = null)
     {
         return $this->queryInternal('fetchAll', $fetchMode);
     }
-
+    
     public function queryOne($fetchMode = null)
     {
         return $this->queryInternal('fetch', $fetchMode);
     }
-
+    
     public function queryColumn()
     {
         return $this->queryInternal('fetchColumn');
     }
-
+    
+    /**
+     * Executes the SQL statement and returns the value of the first column in the first row of data.
+     * This method is best used when only a single value is needed for a query.
+     * @return string|null|false the value of the first column in the first row of the query result.
+     * False is returned if there is no value.
+     * @throws Exception execution failed
+     */
     public function queryScalar()
     {
-        return $this->queryInternal('fetchScalar');
+        $result = $this->queryInternal('fetchScalar', 0);
+        return (is_numeric($result)) ? ( $result + 0 ) : $result;
     }
-
+    
     public function getRawSql()
     {
         if (empty($this->params)) {
@@ -193,8 +201,9 @@ class Command extends BaseCommand
         }
         return $sql;
     }
-
-
+    
+    
+    
     protected function queryInternal($method, $fetchMode = null)
     {
         $rawSql = $this->getRawSql();
@@ -206,9 +215,9 @@ class Command extends BaseCommand
         if ($this->getFormat()===null && strpos($rawSql, 'FORMAT ')===false) {
             $rawSql.=' FORMAT JSON';
         }
-
+        
         \Yii::info($rawSql, 'kak\clickhouse\Command::query');
-
+        
         if ($method !== '') {
             $info = $this->db->getQueryCacheInfo($this->queryCacheDuration, $this->queryCacheDependency);
             if (is_array($info)) {
@@ -229,21 +238,21 @@ class Command extends BaseCommand
                 }
             }
         }
-
+        
         $token = $rawSql;
-
+        
         try {
             Yii::beginProfile($token, 'kak\clickhouse\Command::query');
-
+            
             $response =  $this->db->transport
                 ->createRequest()
                 ->setMethod('POST')
                 ->setContent($rawSql)
                 ->send();
-
+            
             $this->checkResponseStatus($response);
             $result = $this->parseResponse($response, $method);
-
+            
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
         } catch (\Exception $e) {
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
@@ -251,7 +260,7 @@ class Command extends BaseCommand
         }
         return $result;
     }
-
+    
     /**
      * Raise exception when get 500s error
      * @param $response \yii\httpclient\Response
@@ -263,8 +272,8 @@ class Command extends BaseCommand
             throw new DbException($response->getContent());
         }
     }
-
-
+    
+    
     /**
      * Parse response with data
      * @param \yii\httpclient\Response $response
@@ -275,31 +284,33 @@ class Command extends BaseCommand
         $contentType = $response
             ->getHeaders()
             ->get('Content-Type');
-
+        
         list($type) = explode(';', $contentType);
-
+        
         $type = strtolower($type);
         $hash = [
             'application/json' => 'parseJson'
         ];
         $result = (isset($hash[$type]))? $this->{$hash[$type]}($response->content) : $response->content;
-
+        
         switch ($method) {
             case 'fetchColumn':
                 return array_map(function ($a) {
                     return array_values($a)[0];
                 }, $result);
-            break;
+                break;
             case 'fetchScalar':
-                return array_values($result[0])[0];
-            break;
+                if (array_key_exists(0, $result)) {
+                    return current($result[0]);
+                }
+                break;
             case 'fetch':
-                return is_array($result) ? array_shift($result): $result;
-            default:
-            return  $result;
-        }
+                return is_array($result) ? array_shift($result) : $result;
+                break;
+        }        
+        return  $result;
     }
-
+    
     protected function parseJson($content)
     {
         $json = Json::decode($content);
