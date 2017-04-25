@@ -298,8 +298,6 @@ class Command extends BaseCommand
             default:
             return  $result;
         }
-        if ($method == 'fetch') {
-        }
     }
 
     protected function parseJson($content)
