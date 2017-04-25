@@ -30,6 +30,9 @@ to the require section of your composer.json
    // ...     
 ```
 
+## Notes
+* If clickhouse server responds with no response == 200, then you will get the exception
+
 ## Usage
 ```php    
    /** @var \kak\clickhouse\Connection $client */
@@ -77,13 +80,20 @@ class Stat extends Model
 }
 ```
 
-
 ## ActiveRecord model
 
 ```php
 class Stat extends \kak\clickhouse\ActiveRecord 
 {
-	
+
+    // pls overwrite method is config section !=clickhouse
+    // default clickhouse
+	public static function getDb()
+	{
+	    return \Yii::$app->clickhouse;
+	}
+
+
     public static function tableName()
     {
         return 'stat';

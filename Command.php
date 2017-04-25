@@ -128,29 +128,25 @@ class Command extends BaseCommand
 
     public function execute($raw = false)
     {
-       $rawSql = $this->getRawSql();
-       $response =  $this->db->transport
-           ->createRequest()
-           ->setMethod('POST')
-           ->setContent($rawSql)
-           ->send();
+        $rawSql = $this->getRawSql();
+        $response =  $this->db->transport
+            ->createRequest()
+            ->setMethod('POST')
+            ->setContent($rawSql)
+            ->send();
 
-        if ($raw) {
+        $this->checkResponseStatus($response);
+
+        if ($raw){
             return $this->parseResponse($response);
-        } else {
-            /** Raise exception when get 500s error */
-            if ($response->statusCode >= 500) {
-                throw new DbException($response->getContent());
-            }
-            return $response;
         }
+        return $response;
     }
 
     public function queryAll($fetchMode = null)
     {
         return $this->queryInternal('fetchAll', $fetchMode);
     }
-
 
     public function queryOne($fetchMode = null)
     {
@@ -234,9 +230,8 @@ class Command extends BaseCommand
                 ->setContent($rawSql)
                 ->send();
 
-            if($response->getStatusCode() != 200 ) {
-                throw new Exception($response->content);
-            }
+            $this->checkResponseStatus($response);
+
             $result = $this->parseResponse($response,$method);
 
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
@@ -246,6 +241,19 @@ class Command extends BaseCommand
         }
         return $result;
     }
+
+    /**
+     * Raise exception when get 500s error
+     * @param $response \yii\httpclient\Response
+     * @throws Exception
+     */
+    public function checkResponseStatus($response)
+    {
+        if($response->getStatusCode() != 200 ) {
+            throw new DbException($response->getContent());
+        }
+    }
+
 
     /**
      * Parse response with data
