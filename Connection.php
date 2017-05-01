@@ -168,9 +168,12 @@ class Connection extends \yii\db\Connection
         if (!isset($parsed['path'])) {
             $parsed['path'] = '/';
         }
+
+        $auth =  (!empty($parsed['user']) ? $parsed['user'] : '') . (!empty($parsed['pass']) ? ':' . $parsed['pass'] : '');
         $defaultScheme = 'http';
         return (isset($parsed['scheme']) ? $parsed['scheme'] : $defaultScheme)
         . '://'
+        . (!empty($auth) ? $auth . '@' : '')
         . $parsed['host']
         . (!empty($parsed['port']) ? ':' . $parsed['port'] : '')
         . $parsed['path']
