@@ -344,6 +344,7 @@ class Command extends BaseCommand
         return $this->setSql($sql)->bindValues($params);
     }
 
+    public $infile_handle;
     /**
      * @param $table
      * @param null $columns
@@ -354,34 +355,48 @@ class Command extends BaseCommand
     public function batchInsertFiles($table, $columns = null, $files = [], $format = 'CSV')
     {
         $schemaColumns = $this->db->getSchema()->getTableSchema($table)->columns;
-        if ($columns ===null) {
+        if ($columns === null) {
             $columns = $this->db->getSchema()->getTableSchema($table)->columnNames;
         }
 
         $structure = [];
         foreach ($columns as $column) {
+            if(!isset($schemaColumns[$column])){
+                continue;
+            }
             $structure[] = $column . ' ' . $schemaColumns[$column]->dbType;
         }
 
         $sql =  'INSERT INTO '
             . $this->db->getSchema()->quoteTableName($table)
-            . ' (' . implode(', ', $columns)
-            . ') FORMAT ' .$format;
+            .  ' (' . implode(', ', $columns) . ')'
+            . ' FORMAT ' . $format;
 
 
+        $urlBase = $this->db->transport->baseUrl;
         $requests = [];
         foreach ($files as $file) {
             $request = $this->db->transport->createRequest();
-            $request->setData([
+
+            $url = $this->db->buildUrl($urlBase,[
+                'database' => $this->db->database,
                 'query' => $sql,
                 $table.'_structure' => implode(',', $structure),
+                $table.'_format' => $format,
             ]);
-            $request->setMethod('post');
+            $request->setFullUrl($url);
+            $request->setMethod('POST');
             $request->addFile($table, $file);
             $requests[] = $request;
-        }
-        $responses = $this->db->transport->batchSend($requests);
 
+        }
+
+        $responses = $this->db->transport->batchSend($requests);
+        //foreach ($responses as $response){
+        //   var_dump($response->getContent());
+        //   var_dump($response->getHeaders());
+        //   var_dump($response->getFormat());
+        //}
         return $responses;
     }
 
