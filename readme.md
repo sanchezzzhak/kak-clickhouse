@@ -117,6 +117,12 @@ return [
         // ...
         'gii' => [
             'class' => 'yii\gii\Module',
+            'allowedIPs' => [
+                        '127.0.0.1',
+                        '::1',
+                        '192.168.*',
+                        '10.*',
+            ],
             'generators' => [
                 'clickhouseDbModel' => [
                     'class' => 'kak\clickhouse\gii\model\Generator'
@@ -126,6 +132,28 @@ return [
     ]
 ];
 ```
+Using Debug panel
+===================
+
+```
+$config['bootstrap'][] = 'debug';
+    $config['modules']['debug'] = [
+        'class' => 'yii\debug\Module',
+        'allowedIPs' => [
+            '127.0.0.1',
+            '::1',
+            '192.168.*',
+            '10.*',
+        ],
+        'panels' => [
+            'clickhouse' => [
+                'class' => 'kak\clickhouse\debug\Panel',
+                'db' => 'clickhouse'
+            ],
+        ]
+
+    ];
+```
 
 ClickHouse Reference Manual
 ===================
@@ -134,5 +162,14 @@ https://clickhouse.yandex/reference_en.html
 
 Summary of recommendations insert data
 ===================
-1 Accumulated data and insert at one time, it will reduce the operations io disk
-2 @todo how that will add...
+- 1 Accumulated data and insert at one time, it will reduce the operations io disk 
+- 2 @todo how that will add...
+
+
+<!--
+@todo сделать в планах
+- 1 вставку большого файла
+- 2 добавить приоброзование типов для неочень csv файлов
+- 3 миграции из консольким 
+- 4 ...
+-->
