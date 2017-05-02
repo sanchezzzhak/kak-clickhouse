@@ -2,6 +2,7 @@
 
 namespace kak\clickhouse;
 
+use kak\clickhouse\httpclient\Request;
 use yii\base\Component;
 use Yii;
 use yii\base\Exception;
@@ -346,64 +347,109 @@ class Command extends BaseCommand
 
     /**
      * @param $table
-     * @param null $columns
-     * @param array $files
-     * @param string $format
+     * @param null $columns columns default columns get schema table
+     * @param array $files list files
+     * @param string $format file format
      * @return \yii\httpclient\Response[]
      */
     public function batchInsertFiles($table, $columns = null, $files = [], $format = 'CSV')
     {
         $categoryLog = 'kak\clickhouse\Command::batchInsertFiles';
-        $schemaColumns = $this->db->getSchema()->getTableSchema($table)->columns;
         if ($columns === null) {
             $columns = $this->db->getSchema()->getTableSchema($table)->columnNames;
         }
-
-        $structure = [];
-        foreach ($columns as $column) {
-            if(!isset($schemaColumns[$column])){
-                continue;
-            }
-            $structure[] = $column . ' ' . $schemaColumns[$column]->dbType;
-        }
-
-        $sql =  'INSERT INTO '
-            . $this->db->getSchema()->quoteTableName($table)
-            .  ' (' . implode(', ', $columns) . ')'
-            . ' FORMAT ' . $format;
+        $sql = 'INSERT INTO ' . $this->db->getSchema()->quoteTableName($table) . ' (' . implode(', ', $columns) . ')' . ' FORMAT ' . $format;
 
         Yii::info($sql, $categoryLog);
         Yii::beginProfile($sql, $categoryLog);
 
         $urlBase = $this->db->transport->baseUrl;
         $requests = [];
-        foreach ($files as $file) {
-            $request = $this->db->transport->createRequest();
+        $url = $this->db->buildUrl($urlBase, [
+            'database' => $this->db->database,
+            'query' => $sql,
+        ]);
 
-            $url = $this->db->buildUrl($urlBase,[
-                'database' => $this->db->database,
-                'query' => $sql,
-                $table.'_structure' => implode(',', $structure),
-                $table.'_format' => $format,
-            ]);
-
-            $request->setFullUrl($url);
-            $request->setMethod('POST');
-            $request->addFile($table, $file);
-            $requests[] = $request;
+        foreach ($files as $key => $file) {
+            /** @var Request $request */
+            $request = $this->makeBatchInsert($url, file_get_contents($file));
+            $requests[$key][] = $request;
         }
+
         $responses = $this->db->transport->batchSend($requests);
-        //foreach ($responses as $response){
-        //   var_dump($response->getContent());
-        //   var_dump($response->getHeaders());
-        //   var_dump($response->getFormat());
-        //}
-
+        /*foreach ($responses as $response){
+           var_dump($response->getContent());
+           var_dump($response->getHeaders());
+           var_dump($response->getFormat());
+        }*/
         Yii::beginProfile($sql);
-
 
         return $responses;
     }
+
+    /**
+     * @param $table
+     * @param null $columns
+     * @param array $files
+     * @param string $format
+     * @param int $size
+     * @return \yii\httpclient\Response[]
+     */
+    public function batchInsertFilesDataSize($table, $columns = null, $files = [], $format = 'CSV', $size = 10000)
+    {
+        $categoryLog = 'kak\clickhouse\Command::batchInsertFilesDataSize';
+        if ($columns === null) {
+            $columns = $this->db->getSchema()->getTableSchema($table)->columnNames;
+        }
+        $sql = 'INSERT INTO ' . $this->db->getSchema()->quoteTableName($table) . ' (' . implode(', ', $columns) . ')' . ' FORMAT ' . $format;
+
+        Yii::info($sql, $categoryLog);
+        Yii::beginProfile($sql, $categoryLog);
+
+        $urlBase = $this->db->transport->baseUrl;
+        $responses = [];
+        $url = $this->db->buildUrl($urlBase, [
+            'database' => $this->db->database,
+            'query' => $sql,
+        ]);
+        foreach ($files as $key => $file) {
+            if(($handle = fopen($file, 'r')) !== false) {
+                $buffer = '';
+                $count =  $part = 0;
+                while (($line = fgets($handle)) !== false) {
+                    $buffer.= $line;
+                    $count++;
+                    if($count >= $size ){
+                        $buffer = '';  $count = 0;
+                        $responses[$key]['part_' . ( $part++) ] = ($this->makeBatchInsert($url, $buffer)->send());
+                    }
+                }
+                if(!empty($buffer)){
+                    $responses[$key]['part_' . ( $part++) ] = ($this->makeBatchInsert($url, $buffer)->send());
+                }
+                fclose($handle);
+            }
+        }
+        Yii::beginProfile($sql);
+
+        return $responses;
+    }
+
+
+    /**
+     * @param $url
+     * @param $data
+     * @return Request
+     */
+    private function makeBatchInsert($url,$data){
+        /** @var Request $request */
+        $request = $this->db->transport->createRequest();
+        $request->setFullUrl($url);
+        $request->setMethod('POST');
+        $request->setContent($data);
+        return $request;
+    }
+
 
     /**
      * Creates a batch INSERT command.

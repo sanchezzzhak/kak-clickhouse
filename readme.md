@@ -49,9 +49,40 @@ to the require section of your composer.json
         'event_data' => date('Y-m-d'),
         'counter_id' => 122
     ])
-    ->execute();
-			
+    ->execute();	
+    
+    	 	
+    $files = [
+        'dump_20170502' => Yii::getAlias('@app/dump_20170502.csv');
+        'dump_20170503' => Yii::getAlias('@app/dump_20170503.csv');
+        'dump_20170504' => Yii::getAlias('@app/dump_20170504.csv');
+    ];	
+    		
+    $responses = $clickhouse ->createCommand(null)
+    ->batchInsertFiles('stat',null,[
+        $files
+    ],'CSV');	
+    foreach($responses as $keyId => $response){
+        var_dump($keyId . ' ' . $response->isOk);
+    }	
+    
+    	
+    // batch insert files,  batch size = 100 lines
+    $responses = $clickhouse ->createCommand(null)
+    ->batchInsertFilesDataSize('stat',null,[
+        $files
+    ],'CSV', 100);	
+     foreach($responses as $keyId => $parts){
+        foreach($parts as $partId => $response){
+            var_dump($keyId . '_' . $partId. ' ' . $response->isOk);
+        }
+     }		
+    	
 ```
+
+
+
+
 Save custom model 
 ```php
 
@@ -168,8 +199,7 @@ Summary of recommendations insert data
 
 <!--
 @todo сделать в планах
-- 1 вставку большого файла
-- 2 добавить приоброзование типов для неочень csv файлов
-- 3 миграции из консольким 
+- 1 добавить приоброзование типов для неочень csv файлов
+- 2 миграции из консольким 
 - 4 ...
 -->
