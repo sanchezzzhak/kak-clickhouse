@@ -305,6 +305,12 @@ class Connection extends \yii\db\Connection
         return $name;
     }
 
+    public function getDriverName()
+    {
+        return 'clickhouse';
+    }
+
+
     public function quoteColumnName($name)
     {
         return $name;

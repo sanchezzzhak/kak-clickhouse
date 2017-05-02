@@ -344,7 +344,6 @@ class Command extends BaseCommand
         return $this->setSql($sql)->bindValues($params);
     }
 
-    public $infile_handle;
     /**
      * @param $table
      * @param null $columns
@@ -354,6 +353,7 @@ class Command extends BaseCommand
      */
     public function batchInsertFiles($table, $columns = null, $files = [], $format = 'CSV')
     {
+        $categoryLog = 'kak\clickhouse\Command::batchInsertFiles';
         $schemaColumns = $this->db->getSchema()->getTableSchema($table)->columns;
         if ($columns === null) {
             $columns = $this->db->getSchema()->getTableSchema($table)->columnNames;
@@ -372,6 +372,8 @@ class Command extends BaseCommand
             .  ' (' . implode(', ', $columns) . ')'
             . ' FORMAT ' . $format;
 
+        Yii::info($sql, $categoryLog);
+        Yii::beginProfile($sql, $categoryLog);
 
         $urlBase = $this->db->transport->baseUrl;
         $requests = [];
@@ -384,19 +386,22 @@ class Command extends BaseCommand
                 $table.'_structure' => implode(',', $structure),
                 $table.'_format' => $format,
             ]);
+
             $request->setFullUrl($url);
             $request->setMethod('POST');
             $request->addFile($table, $file);
             $requests[] = $request;
-
         }
-
         $responses = $this->db->transport->batchSend($requests);
         //foreach ($responses as $response){
         //   var_dump($response->getContent());
         //   var_dump($response->getHeaders());
         //   var_dump($response->getFormat());
         //}
+
+        Yii::beginProfile($sql);
+
+
         return $responses;
     }
 
