@@ -46,16 +46,24 @@ class Query extends BaseQuery
         return $this;
     }
 
-
-    public function one($db = null, $fetchMode = null )
+    public function one($db = null)
     {
+        $fetchMode  = $this->getFetchMode();
         return $this->createCommand($db)->queryOne($fetchMode);
     }
 
-    public function all($db = null, $fetchMode = null )
+    public function all($db = null )
     {
+        $fetchMode  = $this->getFetchMode();
         return $this->createCommand($db)->queryAll($fetchMode);
     }
 
+    private function getFetchMode()
+    {
+        if($this->withTotals){
+            return Command::FETCH_MODE_ALL;
+        }
+        return null;
+    }
 
 }

@@ -127,10 +127,9 @@ var_dump($total);      // result WITH TOTALS
 $result = (new \kak\clickhouse\Query())
     ->from('test_stat')
     ->withTotals()
-    ->all(null,Command::FETCH_MODE_ALL);
+    ->all();
 
 ```
-
 
 
 set specific options 
