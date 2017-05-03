@@ -22,7 +22,9 @@ class Command extends BaseCommand
     const FETCH_COLUMN = 'fetchColumn';
     const FETCH_SCALAR = 'fetchScalar';
 
+    const FETCH_MODE_TOTAL = 7;
     const FETCH_MODE_ALL = 8;
+
 
     /*** @var Connection */
     public $db;
@@ -353,6 +355,10 @@ class Command extends BaseCommand
 
             if($fetchMode == self::FETCH_MODE_ALL){
                 return $this->getStatementData($result);
+            }
+
+            if($fetchMode == self::FETCH_MODE_TOTAL){
+                return $this->totals();
             }
 
             Yii::endProfile($token, 'kak\clickhouse\Command::query');

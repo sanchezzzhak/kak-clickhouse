@@ -93,16 +93,25 @@ old methods: meta, rows, countAll, statistics
         WITH TOTALS
         LIMIT 10
     '; 	
+    /** @var \kak\clickhouse\Connection $clickhouse */
+    $clickhouse = \Yii::$app->clickhouse;
+    
     $command = $clickhouse->createCommand($sql);  	
     $result  = $command->queryAll();
     
     var_dump($command->meta());  	      // columns meta info (columnName, dataType)
-    var_dump($command->totals());      // result WITH TOTALS
+    var_dump($command->totals());         // result WITH TOTALS
     var_dump($command->data());  	      // get rows data
     var_dump($command->rows());  	      // rows count current result
-    var_dump($command->countAll());    // rows count before limit at least	
+    var_dump($command->countAll());       // rows count before limit at least	
     var_dump($command->extremes());  	
-    var_dump($command->statistics());  // stat query 
+    var_dump($command->statistics());     // stat query 
+    
+ //or
+     
+    $command = $clickhouse->createCommand($sql);  
+    $result  = $command->queryAll($command::FETCH_MODE_ALL);
+    var_dump($result);
     
 ```
 old examples ORM

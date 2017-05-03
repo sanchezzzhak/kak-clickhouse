@@ -19,6 +19,7 @@ class Query extends BaseQuery
     use QueryTrait;
 
     public $withTotals = false;
+    public $withMetaData = false;
 
     /**
      * Creates a DB command that can be used to execute this query.
@@ -37,20 +38,30 @@ class Query extends BaseQuery
     }
 
     /**
-     * @param bool $set
      * @return $this
      */
-    public function withTotals($set = true)
+    public function withTotals()
     {
-        $this->withTotals = $set;
+        $this->withTotals = true;
         return $this;
     }
+
+    /**
+     * @return $this
+     */
+    public function withMetaData()
+    {
+        $this->withMetaData = true;
+        return $this;
+    }
+
 
     public function one($db = null)
     {
         $fetchMode  = $this->getFetchMode();
         return $this->createCommand($db)->queryOne($fetchMode);
     }
+
 
     public function all($db = null )
     {
@@ -60,9 +71,14 @@ class Query extends BaseQuery
 
     private function getFetchMode()
     {
-        if($this->withTotals){
+        if($this->withMetaData){
             return Command::FETCH_MODE_ALL;
         }
+
+        if($this->withTotals){
+            return Command::FETCH_MODE_TOTAL;
+        }
+
         return null;
     }
 
