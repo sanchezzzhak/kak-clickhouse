@@ -17,8 +17,8 @@ use yii\db\QueryTrait;
 class Query extends BaseQuery
 {
 
-    public $withTotals = false;
-    public $withMetaData = false;
+    private $_withTotals = false;
+    private $_withMetaData = false;
 
     /**
      * Creates a DB command that can be used to execute this query.
@@ -36,49 +36,78 @@ class Query extends BaseQuery
         return $db->createCommand($sql, $params);
     }
 
-    /**
-     * @return $this
-     */
-    public function withTotals()
-    {
-        $this->withTotals = true;
-        return $this;
-    }
 
     /**
-     * @return $this
+     * @param null $db
+     * @return array|mixed
      */
-    public function withMetaData()
-    {
-        $this->withMetaData = true;
-        return $this;
-    }
-
-
     public function one($db = null)
     {
-        $fetchMode  = $this->getFetchMode();
+        $fetchMode = $this->getFetchMode();
         return $this->createCommand($db)->queryOne($fetchMode);
     }
 
 
+    /**
+     * @param null $db
+     * @return array|mixed
+     */
     public function all($db = null )
     {
         $fetchMode  = $this->getFetchMode();
         return $this->createCommand($db)->queryAll($fetchMode);
     }
 
+    /**
+     * @return int|null
+     */
     private function getFetchMode()
     {
-        if($this->withMetaData){
+        if($this->hasWithMetaData()){
             return Command::FETCH_MODE_ALL;
         }
 
-        if($this->withTotals){
+        if($this->hasWithTotals()){
             return Command::FETCH_MODE_TOTAL;
         }
 
         return null;
+    }
+
+    /**
+     * @return $this
+     */
+    public function withTotals()
+    {
+        $this->_withTotals = true;
+        return $this;
+    }
+
+
+    /**
+     * @return $this
+     */
+    public function withMetaData()
+    {
+        $this->_withMetaData = true;
+        return $this;
+    }
+
+
+    /**
+     * @return bool
+     */
+    public function hasWithTotals()
+    {
+        return $this->_withTotals;
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasWithMetaData()
+    {
+        return $this->_withMetaData;
     }
 
 }
