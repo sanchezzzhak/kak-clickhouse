@@ -132,13 +132,12 @@ var_dump($total);      // result WITH TOTALS
 
 // -----
 
-// all array result
-
-$result = (new \kak\clickhouse\Query())
+$command = (new \kak\clickhouse\Query())
     ->from('test_stat')
-    ->withTotals()
-    ->withMetaData()
-    ->all();
+    ->withTotals();
+    
+$result =  $command->all();        // result data
+var_dump($command->totals());      // result WITH TOTALS
 
 ```
 

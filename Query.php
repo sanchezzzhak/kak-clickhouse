@@ -8,17 +8,26 @@
 namespace kak\clickhouse;
 
 use yii\db\Query as BaseQuery;
-use yii\db\QueryTrait;
+use yii\db\Exception as DbException;
+
 
 /**
  * Class Query
  * @package kak\clickhouse
+ * @method countAll() int
+ * @method totals() array
+ * @method data() array
+ * @method extremes() array
+ * @method rows() int
+ * @method meta() array
  */
 class Query extends BaseQuery
 {
 
+    /** @var \kak\clickhouse\Command|null  */
+    private $_command;
+    /** @var bool  */
     private $_withTotals = false;
-    private $_withMetaData = false;
 
     /**
      * Creates a DB command that can be used to execute this query.
@@ -33,9 +42,8 @@ class Query extends BaseQuery
         }
         list ($sql, $params) = $db->getQueryBuilder()->build($this);
 
-        return $db->createCommand($sql, $params);
+        return $this->_command = $db->createCommand($sql, $params);
     }
-
 
     /**
      * @param null $db
@@ -43,10 +51,8 @@ class Query extends BaseQuery
      */
     public function one($db = null)
     {
-        $fetchMode = $this->getFetchMode();
-        return $this->createCommand($db)->queryOne($fetchMode);
+        return $this->createCommand($db)->queryOne();
     }
-
 
     /**
      * @param null $db
@@ -54,24 +60,7 @@ class Query extends BaseQuery
      */
     public function all($db = null )
     {
-        $fetchMode  = $this->getFetchMode();
-        return $this->createCommand($db)->queryAll($fetchMode);
-    }
-
-    /**
-     * @return int|null
-     */
-    private function getFetchMode()
-    {
-        if($this->hasWithMetaData()){
-            return Command::FETCH_MODE_ALL;
-        }
-
-        if($this->hasWithTotals()){
-            return Command::FETCH_MODE_TOTAL;
-        }
-
-        return null;
+        return $this->createCommand($db)->queryAll();
     }
 
     /**
@@ -83,17 +72,6 @@ class Query extends BaseQuery
         return $this;
     }
 
-
-    /**
-     * @return $this
-     */
-    public function withMetaData()
-    {
-        $this->_withMetaData = true;
-        return $this;
-    }
-
-
     /**
      * @return bool
      */
@@ -103,11 +81,42 @@ class Query extends BaseQuery
     }
 
     /**
-     * @return bool
+     * check is first method executed
+     * @throws DbException
      */
-    public function hasWithMetaData()
+    private function ensureQueryExecuted()
     {
-        return $this->_withMetaData;
+        if( null === $this->_command ) {
+            throw new DbException('Query was not executed yet');
+        }
     }
+
+    /**
+     * @param $name
+     * @return mixed
+     */
+    private function getSpecialCommand($name){
+        $this->ensureQueryExecuted();
+        return $this->_command->{$name}();
+    }
+
+    public function __call($name, $params)
+    {
+        $methods = [ 'meta', 'data', 'extremes', 'totals', 'countall', 'rows'];
+        if(in_array(strtolower($name),$methods)){
+            return $this->getSpecialCommand($name);
+        }
+        return parent::__call($name, $params);
+    }
+
+    /**
+     * reset command
+     */
+    public function __clone()
+    {
+        $this->_command = null;
+        parent::__clone();
+    }
+
 
 }
