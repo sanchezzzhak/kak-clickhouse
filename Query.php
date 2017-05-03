@@ -16,7 +16,6 @@ use yii\db\QueryTrait;
  */
 class Query extends BaseQuery
 {
-    use QueryTrait;
 
     public $withTotals = false;
     public $withMetaData = false;
