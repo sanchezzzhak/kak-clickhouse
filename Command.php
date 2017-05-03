@@ -13,9 +13,19 @@ use yii\helpers\Json;
 
 class Command extends BaseCommand
 {
+
+    const FETCH = 'fetch';
+    const FETCH_RAW = 'fetchRaw';
+    const FETCH_ALL = 'fetchAll';
+    const FETCH_COLUMN = 'fetchColumn';
+    const FETCH_SCALAR = 'fetchScalar';
+
+
+
     /*** @var Connection */
     public $db;
-    
+
+
     public $params = [];
     
     /**
@@ -33,11 +43,43 @@ class Command extends BaseCommand
     
     
     private $_sql;
-    
+
     private $_format = null;
+
     private $_pendingParams = [];
-    
-    
+
+    private $_is_result;
+
+    /**
+     * @var
+     */
+    private $_meta;
+    /**
+     * @var
+     */
+    private $_data;
+    /**
+     * @var
+     */
+    private $_totals;
+    /**
+     * @var array
+     */
+    private $_extremes;
+    /**
+     * @var int
+     */
+    private $_rows;
+    /**
+     * @var array
+     */
+    private $_statistics;
+    /**
+     * @var
+     */
+    private $_rows_before_limit_at_least;
+
+
     /**
      * @return null
      */
@@ -128,7 +170,7 @@ class Command extends BaseCommand
     }
     
     
-    public function execute($raw = false)
+    public function execute($prepare = false)
     {
         $rawSql = $this->getRawSql();
         $response =  $this->db->transport
@@ -139,7 +181,7 @@ class Command extends BaseCommand
         
         $this->checkResponseStatus($response);
         
-        if ($raw) {
+        if ($prepare) {
             return $this->parseResponse($response);
         }
         return $response;
@@ -147,17 +189,17 @@ class Command extends BaseCommand
     
     public function queryAll($fetchMode = null)
     {
-        return $this->queryInternal('fetchAll', $fetchMode);
+        return $this->queryInternal(self::FETCH_ALL, $fetchMode);
     }
     
     public function queryOne($fetchMode = null)
     {
-        return $this->queryInternal('fetch', $fetchMode);
+        return $this->queryInternal(self::FETCH, $fetchMode);
     }
     
     public function queryColumn()
     {
-        return $this->queryInternal('fetchColumn');
+        return $this->queryInternal(self::FETCH_COLUMN);
     }
     
     /**
@@ -169,7 +211,7 @@ class Command extends BaseCommand
      */
     public function queryScalar()
     {
-        $result = $this->queryInternal('fetchScalar', 0);
+        $result = $this->queryInternal(self::FETCH_SCALAR, 0);
         return (is_numeric($result)) ? ( $result + 0 ) : $result;
     }
     
@@ -202,8 +244,33 @@ class Command extends BaseCommand
         }
         return $sql;
     }
-    
-    
+
+
+    //private function getQueryCacheData($method, $fetchMode, $rawSql)
+    //{
+    //    if ($method !== '') {
+    //        $info = $this->db->getQueryCacheInfo($this->queryCacheDuration, $this->queryCacheDependency);
+    //        if (is_array($info)) {
+    //            /* @var $cache \yii\caching\Cache */
+    //            $cache = $info[0];
+    //            $cacheKey = [
+    //                __CLASS__,
+    //                $method,
+    //                $fetchMode,
+    //                $this->db->dsn,
+    //                $this->db->username,
+    //                $rawSql,
+    //            ];
+    //            $result = $cache->get($cacheKey);
+    //            if (is_array($result) && isset($result[0])) {
+    //                Yii::trace('Query result served from cache', 'kak\clickhouse\Command::query');
+    //                return $this->parseResponse($result, $method);
+    //            }
+    //        }
+    //    }
+    //    return null;
+    //}
+
     
     protected function queryInternal($method, $fetchMode = null)
     {
@@ -216,30 +283,8 @@ class Command extends BaseCommand
         if ($this->getFormat()===null && strpos($rawSql, 'FORMAT ')===false) {
             $rawSql.=' FORMAT JSON';
         }
-        
+
         \Yii::info($rawSql, 'kak\clickhouse\Command::query');
-        
-        if ($method !== '') {
-            $info = $this->db->getQueryCacheInfo($this->queryCacheDuration, $this->queryCacheDependency);
-            if (is_array($info)) {
-                /* @var $cache \yii\caching\Cache */
-                $cache = $info[0];
-                $cacheKey = [
-                    __CLASS__,
-                    $method,
-                    $fetchMode,
-                    $this->db->dsn,
-                    $this->db->username,
-                    $rawSql,
-                ];
-                $result = $cache->get($cacheKey);
-                if (is_array($result) && isset($result[0])) {
-                    Yii::trace('Query result served from cache', 'kak\clickhouse\Command::query');
-                    return $result[0];
-                }
-            }
-        }
-        
         $token = $rawSql;
         
         try {
@@ -252,8 +297,9 @@ class Command extends BaseCommand
                 ->send();
             
             $this->checkResponseStatus($response);
+
             $result = $this->parseResponse($response, $method);
-            
+
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
         } catch (\Exception $e) {
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
@@ -261,7 +307,8 @@ class Command extends BaseCommand
         }
         return $result;
     }
-    
+
+
     /**
      * Raise exception when get 500s error
      * @param $response \yii\httpclient\Response
@@ -278,9 +325,11 @@ class Command extends BaseCommand
     /**
      * Parse response with data
      * @param \yii\httpclient\Response $response
+     * @param null|string $method
+     * @param bool $prepareResponse
      * @return mixed|array
      */
-    public function parseResponse(\yii\httpclient\Response $response, $method = null)
+    private function parseResponse(\yii\httpclient\Response $response, $method = null )
     {
         $contentType = $response
             ->getHeaders()
@@ -292,32 +341,124 @@ class Command extends BaseCommand
         $hash = [
             'application/json' => 'parseJson'
         ];
+
         $result = (isset($hash[$type]))? $this->{$hash[$type]}($response->content) : $response->content;
-        
+        $this->prepareResponseData($result);
+
+        $result = ArrayHelper::getValue($result,'data',[]);
         switch ($method) {
-            case 'fetchColumn':
+            case self::FETCH_COLUMN:
                 return array_map(function ($a) {
                     return array_values($a)[0];
-                }, $result);
+                }, $this->data());
                 break;
-            case 'fetchScalar':
+            case self::FETCH_SCALAR:
                 if (array_key_exists(0, $result)) {
                     return current($result[0]);
                 }
                 break;
-            case 'fetch':
+            case self::FETCH:
                 return is_array($result) ? array_shift($result) : $result;
                 break;
-        }        
+        }
+
         return  $result;
     }
-    
-    protected function parseJson($content)
+
+    private function prepareResponseData($result)
     {
-        $json = Json::decode($content);
-        return ArrayHelper::getValue($json, 'data', []);
+        if(!is_array($result)){
+            return;
+        }
+
+        $this->_is_result = true;
+        foreach (['meta', 'data', 'totals', 'extremes', 'rows', 'rows_before_limit_at_least','statistics'] as $key) {
+            if (isset($result[$key])) {
+                $attr = "_". $key;
+                $this->{$attr} = $result[$key];
+            }
+        }
     }
 
+    private function parseJson($content)
+    {
+        return Json::decode($content);
+    }
+
+    private function isQueryInternalExecute()
+    {
+        if($this->_is_result === null && !empty($this->_sql)){
+            $this->queryInternal(null);
+        }
+    }
+
+    /**
+     * get meta columns information
+     * @return mixed
+     */
+    public function meta()
+    {
+        $this->isQueryInternalExecute();
+        return $this->_meta;
+    }
+
+    /**
+     * get data result
+     * @return mixed
+     */
+    public function data()//
+    {
+        $this->isQueryInternalExecute();
+        return $this->_data;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function totals()
+    {
+        $this->isQueryInternalExecute();
+        return $this->_totals;
+    }
+    
+
+    /**
+     * @return mixed
+     */
+    public function extremes()
+    {
+        $this->isQueryInternalExecute();
+        return $this->_extremes;
+    }
+
+    /**
+     *  get count result items
+     * @return mixed
+     */
+    public function rows()
+    {
+        $this->isQueryInternalExecute();
+        return $this->_rows;
+    }
+
+    /**
+     * max count result items
+     * @return mixed
+     */
+    public function countAll()
+    {
+        $this->isQueryInternalExecute();
+        return $this->_rows_before_limit_at_least;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function statistics()
+    {
+        $this->isQueryInternalExecute();
+        return $this->_statistics;
+    }
 
     /**
      * Creates an INSERT command.
@@ -373,7 +514,7 @@ class Command extends BaseCommand
         foreach ($files as $key => $file) {
             /** @var Request $request */
             $request = $this->makeBatchInsert($url, file_get_contents($file));
-            $requests[$key][] = $request;
+            $requests[$key] = $request;
         }
 
         $responses = $this->db->transport->batchSend($requests);

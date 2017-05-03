@@ -35,30 +35,34 @@ to the require section of your composer.json
 
 ## Usage
 ```php    
+
    /** @var \kak\clickhouse\Connection $client */
     $client = \Yii::$app->clickhouse;
     $sql = 'select * from stat where counter_id=:counter_id';
     $client->createCommand($sql,[
         ':counter_id' => 122
     ])->queryAll();
-
-
-    // insert data ORM
+    
+    // ====== insert data ORM ======
+    
     $client->createCommand(null)
     ->insert('stat', [
         'event_data' => date('Y-m-d'),
         'counter_id' => 122
     ])
     ->execute();	
-    
-    	 	
+```
+
+batch insert files
+ 
+```php    	 	
     $files = [
         'dump_20170502' => Yii::getAlias('@app/dump_20170502.csv');
         'dump_20170503' => Yii::getAlias('@app/dump_20170503.csv');
         'dump_20170504' => Yii::getAlias('@app/dump_20170504.csv');
     ];	
     		
-    $responses = $clickhouse ->createCommand(null)
+    $responses = $clickhouse->createCommand(null)
     ->batchInsertFiles('stat',null,[
         $files
     ],'CSV');	
@@ -66,9 +70,10 @@ to the require section of your composer.json
         var_dump($keyId . ' ' . $response->isOk);
     }	
     
-    	
-    // batch insert files,  batch size = 100 lines
-    $responses = $clickhouse ->createCommand(null)
+```
+batch insert files,  batch size = 100 lines
+```php 
+    $responses = $clickhouse->createCommand(null)
     ->batchInsertFilesDataSize('stat',null,[
         $files
     ],'CSV', 100);	
@@ -76,11 +81,30 @@ to the require section of your composer.json
         foreach($parts as $partId => $response){
             var_dump($keyId . '_' . $partId. ' ' . $response->isOk);
         }
-     }		
-    	
+     }	
+
 ```
-
-
+old methods: meta, rows, countAll, statistics 
+```php     	
+    $sql = 'SELECT 
+        user_id, sum(income) AS sum_income
+        FROM stat
+        GROUP BY event_date
+        WITH TOTALS
+        LIMIT 10
+    '; 	
+    $command = $clickhouse->createCommand($sql);  	
+    $result  = $command->queryAll();
+    
+    var_dump($command->meta());  	// columns meta info (columnName, dataType)
+    var_dump($command->totals());  	// result WITH TOTALS
+    var_dump($command->data());  	// get rows data
+    var_dump($command->rows());  	// rows count current result
+    var_dump($command->countAll()); // rows count before limit at least	
+    var_dump($command->extremes());  	
+    var_dump($command->statistics());  // stat query 
+    
+```
 
 
 Save custom model 
@@ -92,22 +116,21 @@ class Stat extends Model
     public $event_date; // Date;
     public $counter_id  = 0; // Int32,
 
-	public function save($validate = true)
-	{
-		/** @var \kak\clickhouse\Connection $client */
-		$client = \Yii::$app->clickhouse;
-		$this->event_date = date('Y-m-d');
+    public function save($validate = true)
+    {
+        /** @var \kak\clickhouse\Connection $client */
+        $client = \Yii::$app->clickhouse;
+        $this->event_date = date('Y-m-d');
 
-		if($validate && !$this->validate()){
-			return false;
-		}
+        if($validate && !$this->validate()){
+            return false;
+        }
 
-		$attributes = $this->getAttributes();
-		$client->createCommand(null)
-			->insert('stat', $attributes )
-			->execute();	
-	}
-
+        $attributes = $this->getAttributes();
+        $client->createCommand(null)
+            ->insert('stat', $attributes )
+            ->execute();	
+    }
 }
 ```
 
