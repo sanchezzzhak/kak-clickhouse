@@ -50,6 +50,9 @@ class Command extends BaseCommand
 
     private $_is_result;
 
+    private $_options =[];
+
+
     /**
      * @var
      */
@@ -97,7 +100,42 @@ class Command extends BaseCommand
         $this->_format = $format;
         return $this;
     }
-    
+
+    /**
+     * @return array
+     */
+    public function getOptions()
+    {
+        return $this->_options;
+    }
+
+    /**
+     * @param array $options
+     * @return $this
+     */
+    public function setOptions($options)
+    {
+        $this->_options = $options;
+        return $this;
+    }
+
+    /**
+     * Adds more options to already defined ones.
+     * Please refer to [[setOptions()]] on how to specify options.
+     * @param array $options additional options
+     * @return $this self reference.
+     */
+    public function addOptions(array $options)
+    {
+        foreach ($options as $key => $value) {
+            if (is_array($value) && isset($this->_options[$key])) {
+                $value = ArrayHelper::merge($this->_options[$key], $value);
+            }
+            $this->_options[$key] = $value;
+        }
+        return $this;
+    }
+
     /**
      * Enables query cache for this command.
      * @param integer $duration the number of seconds that query result of this command can remain valid in the cache.
@@ -175,6 +213,7 @@ class Command extends BaseCommand
         $rawSql = $this->getRawSql();
         $response =  $this->db->transport
             ->createRequest()
+            ->setUrl($this->getBaseUrl())
             ->setMethod('POST')
             ->setContent($rawSql)
             ->send();
@@ -191,12 +230,13 @@ class Command extends BaseCommand
     {
         return $this->queryInternal(self::FETCH_ALL, $fetchMode);
     }
-    
+
     public function queryOne($fetchMode = null)
     {
         return $this->queryInternal(self::FETCH, $fetchMode);
     }
-    
+
+
     public function queryColumn()
     {
         return $this->queryInternal(self::FETCH_COLUMN);
@@ -274,6 +314,7 @@ class Command extends BaseCommand
     
     protected function queryInternal($method, $fetchMode = null)
     {
+
         $rawSql = $this->getRawSql();
         if ($method == 'fetch') {
             if (preg_match('#^SELECT#is', $rawSql) && !preg_match('#LIMIT#is', $rawSql)) {
@@ -289,9 +330,10 @@ class Command extends BaseCommand
         
         try {
             Yii::beginProfile($token, 'kak\clickhouse\Command::query');
-            
+
             $response =  $this->db->transport
                 ->createRequest()
+                ->setUrl($this->getBaseUrl())
                 ->setMethod('POST')
                 ->setContent($rawSql)
                 ->send();
@@ -308,6 +350,13 @@ class Command extends BaseCommand
         return $result;
     }
 
+    protected function getBaseUrl()
+    {
+        $urlBase = $this->db->transport->baseUrl;
+        return $this->db->buildUrl($urlBase, array_merge([
+            'database' => $this->db->database
+        ],$this->getOptions()));
+    }
 
     /**
      * Raise exception when get 500s error

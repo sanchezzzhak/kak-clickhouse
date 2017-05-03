@@ -164,7 +164,8 @@ class Connection extends \yii\db\Connection
         $parsed = parse_url($url);
         isset($parsed['query']) ? parse_str($parsed['query'], $parsed['query']) : $parsed['query'] = [];
         $params = isset($parsed['query']) ? array_merge($parsed['query'], $data) : $data;
-        $parsed['query'] = ($params) ? '?' . http_build_query($params) : '';
+
+        $parsed['query'] = !empty($params) ? '?' . http_build_query($params) : '';
         if (!isset($parsed['path'])) {
             $parsed['path'] = '/';
         }

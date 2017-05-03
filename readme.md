@@ -96,16 +96,29 @@ old methods: meta, rows, countAll, statistics
     $command = $clickhouse->createCommand($sql);  	
     $result  = $command->queryAll();
     
-    var_dump($command->meta());  	// columns meta info (columnName, dataType)
-    var_dump($command->totals());  	// result WITH TOTALS
-    var_dump($command->data());  	// get rows data
-    var_dump($command->rows());  	// rows count current result
-    var_dump($command->countAll()); // rows count before limit at least	
+    var_dump($command->meta());  	      // columns meta info (columnName, dataType)
+    var_dump($command->totals());      // result WITH TOTALS
+    var_dump($command->data());  	      // get rows data
+    var_dump($command->rows());  	      // rows count current result
+    var_dump($command->countAll());    // rows count before limit at least	
     var_dump($command->extremes());  	
     var_dump($command->statistics());  // stat query 
     
 ```
+set specific options 
+```php
+  /** @var \kak\clickhouse\Connection $client */
+    $client = \Yii::$app->clickhouse;
+    $sql = 'select * from stat where counter_id=:counter_id';
+    $client->createCommand($sql,[
+        ':counter_id' => 122
+    ])->setOptions([
+        'max_threads' => 2
+    ])->queryAll();
 
+// add options use method
+// ->addOptions([])
+```
 
 Save custom model 
 ```php
