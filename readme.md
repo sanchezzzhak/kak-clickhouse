@@ -105,6 +105,34 @@ old methods: meta, rows, countAll, statistics
     var_dump($command->statistics());  // stat query 
     
 ```
+old examples ORM
+```php
+
+$q = (new \kak\clickhouse\Query())->from('stat')
+    ->withTotals()
+    ->where(['event_date' => '2017-05-01' , 'user_id' => 5 ])
+    ->offset(2)
+    ->limit(1);
+
+$command = $q->createCommand();
+$result  = $command->queryAll();
+$total   = $command->countAll();
+
+var_dump($result);     // result data
+var_dump($total);      // result WITH TOTALS
+
+// -----
+
+// all array result
+$result = (new \kak\clickhouse\Query())
+    ->from('test_stat')
+    ->withTotals()
+    ->all(null,Command::FETCH_MODE_ALL);
+
+```
+
+
+
 set specific options 
 ```php
   /** @var \kak\clickhouse\Connection $client */

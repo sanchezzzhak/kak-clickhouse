@@ -3,7 +3,6 @@
 namespace kak\clickhouse;
 
 use kak\clickhouse\httpclient\Request;
-use yii\base\Component;
 use Yii;
 use yii\base\Exception;
 use yii\db\Command as BaseCommand;
@@ -11,16 +10,19 @@ use yii\db\Exception as DbException;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Json;
 
+/**
+ * Class Command
+ * @package kak\clickhouse
+ */
 class Command extends BaseCommand
 {
 
     const FETCH = 'fetch';
-    const FETCH_RAW = 'fetchRaw';
     const FETCH_ALL = 'fetchAll';
     const FETCH_COLUMN = 'fetchColumn';
     const FETCH_SCALAR = 'fetchScalar';
 
-
+    const FETCH_MODE_ALL = 8;
 
     /*** @var Connection */
     public $db;
@@ -185,9 +187,9 @@ class Command extends BaseCommand
         }
         return $this;
     }
-    
-    
-    
+
+
+
     public function bindValues($values)
     {
         if (empty($values)) {
@@ -203,7 +205,7 @@ class Command extends BaseCommand
                 $this->params[$name] = $value;
             }
         }
-        
+
         return $this;
     }
     
@@ -225,12 +227,20 @@ class Command extends BaseCommand
         }
         return $response;
     }
-    
+
+    /**
+     * @param null $fetchMode
+     * @return array|mixed
+     */
     public function queryAll($fetchMode = null)
     {
         return $this->queryInternal(self::FETCH_ALL, $fetchMode);
     }
 
+    /**
+     * @param null $fetchMode
+     * @return array|mixed
+     */
     public function queryOne($fetchMode = null)
     {
         return $this->queryInternal(self::FETCH, $fetchMode);
@@ -316,7 +326,7 @@ class Command extends BaseCommand
     {
 
         $rawSql = $this->getRawSql();
-        if ($method == 'fetch') {
+        if ( $method ==  self::FETCH ) {
             if (preg_match('#^SELECT#is', $rawSql) && !preg_match('#LIMIT#is', $rawSql)) {
                 $rawSql.=' LIMIT 1';
             }
@@ -339,8 +349,11 @@ class Command extends BaseCommand
                 ->send();
             
             $this->checkResponseStatus($response);
-
             $result = $this->parseResponse($response, $method);
+
+            if($fetchMode == self::FETCH_MODE_ALL){
+                return $this->getStatementData($result);
+            }
 
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
         } catch (\Exception $e) {
@@ -349,6 +362,24 @@ class Command extends BaseCommand
         }
         return $result;
     }
+
+    /**
+     * @param $result
+     * @return array
+     */
+    protected function getStatementData($result)
+    {
+        return [
+            'meta' => $this->meta(),
+            'data' => $result,
+            'rows' => $this->rows(),
+            'countAll' => $this->countAll(),
+            'totals' => $this->totals(),
+            'statistics' => $this->statistics(),
+            'extremes' => $this->extremes(),
+        ];
+    }
+
 
     protected function getBaseUrl()
     {
@@ -393,7 +424,6 @@ class Command extends BaseCommand
 
         $result = (isset($hash[$type]))? $this->{$hash[$type]}($response->content) : $response->content;
         $this->prepareResponseData($result);
-
         $result = ArrayHelper::getValue($result,'data',[]);
         switch ($method) {
             case self::FETCH_COLUMN:
@@ -434,10 +464,10 @@ class Command extends BaseCommand
         return Json::decode($content);
     }
 
-    private function isQueryInternalExecute()
+    private function ensureQueryExecuted()
     {
-        if($this->_is_result === null && !empty($this->_sql)){
-            $this->queryInternal(null);
+        if( true !== $this->_is_result ) {
+            throw new DbException('Query was not executed yet');
         }
     }
 
@@ -447,17 +477,20 @@ class Command extends BaseCommand
      */
     public function meta()
     {
-        $this->isQueryInternalExecute();
+        $this->ensureQueryExecuted();
         return $this->_meta;
     }
 
     /**
-     * get data result
-     * @return mixed
+     * get all data result
+     * @return mixed|array
      */
-    public function data()//
+    public function data()
     {
-        $this->isQueryInternalExecute();
+        if($this->_is_result === null && !empty($this->_sql)){
+            $this->queryInternal(null);
+        }
+        $this->ensureQueryExecuted();
         return $this->_data;
     }
 
@@ -466,7 +499,7 @@ class Command extends BaseCommand
      */
     public function totals()
     {
-        $this->isQueryInternalExecute();
+        $this->ensureQueryExecuted();
         return $this->_totals;
     }
     
@@ -476,7 +509,7 @@ class Command extends BaseCommand
      */
     public function extremes()
     {
-        $this->isQueryInternalExecute();
+        $this->ensureQueryExecuted();
         return $this->_extremes;
     }
 
@@ -486,7 +519,7 @@ class Command extends BaseCommand
      */
     public function rows()
     {
-        $this->isQueryInternalExecute();
+        $this->ensureQueryExecuted();
         return $this->_rows;
     }
 
@@ -496,7 +529,7 @@ class Command extends BaseCommand
      */
     public function countAll()
     {
-        $this->isQueryInternalExecute();
+        $this->ensureQueryExecuted();
         return $this->_rows_before_limit_at_least;
     }
 
@@ -505,7 +538,7 @@ class Command extends BaseCommand
      */
     public function statistics()
     {
-        $this->isQueryInternalExecute();
+        $this->ensureQueryExecuted();
         return $this->_statistics;
     }
 

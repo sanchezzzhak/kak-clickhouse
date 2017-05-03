@@ -109,7 +109,7 @@ class Connection extends \yii\db\Connection
         $this->open();
         \Yii::trace("Executing ClickHouse: {$sql}", __METHOD__);
 
-        /** @var Command $command */
+        /** @var $command \kak\clickhouse\Command  */
         $command = new $this->commandClass([
             'db' => $this,
             'sql' => $sql,

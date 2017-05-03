@@ -1,6 +1,7 @@
 <?php
 namespace kak\clickhouse;
 
+use yii\db\Expression;
 use yii\db\QueryBuilder as BaseQueryBuilder;
 
 class QueryBuilder extends BaseQueryBuilder
@@ -27,6 +28,67 @@ class QueryBuilder extends BaseQueryBuilder
     ];
 
     /**
+     * Generates a SELECT SQL statement from a [[Query]] object.
+     * @param Query $query the [[Query]] object from which the SQL statement will be generated.
+     * @param array $params the parameters to be bound to the generated SQL statement. These parameters will
+     * be included in the result with the additional parameters generated during the query building process.
+     * @return array the generated SQL statement (the first array element) and the corresponding
+     * parameters to be bound to the SQL statement (the second array element). The parameters returned
+     * include those provided in `$params`.
+     */
+    public function build($query, $params = [])
+    {
+        $query = $query->prepare($this);
+
+        $params = empty($params) ? $query->params : array_merge($params, $query->params);
+
+        $clauses = [
+            $this->buildSelect($query->select, $params, $query->distinct, $query->selectOption),
+            $this->buildFrom($query->from, $params),
+            $this->buildJoin($query->join, $params),
+            $this->buildWhere($query->where, $params),
+            $this->buildGroupBy($query->groupBy),
+            $this->buildHaving($query->having, $params),
+            $this->buildWithTotals($query->withTotals),
+        ];
+
+        $sql = implode($this->separator, array_filter($clauses));
+        $sql = $this->buildOrderByAndLimit($sql, $query->orderBy, $query->limit, $query->offset);
+
+        if (!empty($query->orderBy)) {
+            foreach ($query->orderBy as $expression) {
+                if ($expression instanceof Expression) {
+                    $params = array_merge($params, $expression->params);
+                }
+            }
+        }
+        if (!empty($query->groupBy)) {
+            foreach ($query->groupBy as $expression) {
+                if ($expression instanceof Expression) {
+                    $params = array_merge($params, $expression->params);
+                }
+            }
+        }
+
+        $union = $this->buildUnion($query->union, $params);
+        if ($union !== '') {
+            $sql = "($sql){$this->separator}$union";
+        }
+
+        return [$sql, $params];
+    }
+
+    /**
+     * @param string|array $condition
+     * @return string the WITH TOTALS clause built from [[Query::$withTotals]].
+     */
+    public function buildWithTotals($condition)
+    {
+        return $condition === true ? ' WITH TOTALS ' : '';
+    }
+
+
+    /**
      * Set default engine option if don't set
      *
      * @param $table
@@ -42,6 +104,10 @@ class QueryBuilder extends BaseQueryBuilder
         return parent::createTable($table, $columns, $options);
     }
 
+    /**
+     * @param string|\yii\db\ColumnSchemaBuilder $type
+     * @return mixed|string|\yii\db\ColumnSchemaBuilder
+     */
     public function getColumnType($type)
     {
         if ($type instanceof ColumnSchemaBuilder) {
@@ -80,7 +146,5 @@ class QueryBuilder extends BaseQueryBuilder
 
         return ltrim($sql);
     }
-
-
 
 }
