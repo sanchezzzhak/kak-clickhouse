@@ -125,7 +125,7 @@ $q = (new \kak\clickhouse\Query())->from('stat')
 
 $command = $q->createCommand();
 $result  = $command->queryAll();
-$total   = $command->countAll();
+$total   = $command->totals();
 
 var_dump($result);     // result data
 var_dump($total);      // result WITH TOTALS
@@ -133,9 +133,11 @@ var_dump($total);      // result WITH TOTALS
 // -----
 
 // all array result
+
 $result = (new \kak\clickhouse\Query())
     ->from('test_stat')
     ->withTotals()
+    ->withMetaData()
     ->all();
 
 ```
