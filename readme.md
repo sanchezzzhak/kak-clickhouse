@@ -99,13 +99,13 @@ old methods: meta, rows, countAll, statistics
     $command = $clickhouse->createCommand($sql);  	
     $result  = $command->queryAll();
     
-    var_dump($command->meta());  	      // columns meta info (columnName, dataType)
-    var_dump($command->totals());         // result WITH TOTALS
-    var_dump($command->data());  	      // get rows data
-    var_dump($command->rows());  	      // rows count current result
-    var_dump($command->countAll());       // rows count before limit at least	
-    var_dump($command->extremes());  	
-    var_dump($command->statistics());     // stat query 
+    var_dump($command->getMeta());  	      // columns meta info (columnName, dataType)
+    var_dump($command->getMotals());         // result WITH TOTALS
+    var_dump($command->getData());  	      // get rows data
+    var_dump($command->getRows());  	      // rows count current result
+    var_dump($command->getCountAll());       // rows count before limit at least	
+    var_dump($command->getExtremes());  	
+    var_dump($command->getStatistics());     // stat query 
     
  //or
      
@@ -125,7 +125,7 @@ $q = (new \kak\clickhouse\Query())->from('stat')
 
 $command = $q->createCommand();
 $result  = $command->queryAll();
-$total   = $command->totals();
+$total   = $command->getTotals();
 
 var_dump($result);     // result data
 var_dump($total);      // result WITH TOTALS
@@ -137,7 +137,7 @@ $command = (new \kak\clickhouse\Query())
     ->withTotals();
     
 $result =  $command->all();        // result data
-var_dump($command->totals());      // result WITH TOTALS
+var_dump($command->getTotals());      // result WITH TOTALS
 
 ```
 

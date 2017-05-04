@@ -435,7 +435,7 @@ class Command extends BaseCommand
             case self::FETCH_COLUMN:
                 return array_map(function ($a) {
                     return array_values($a)[0];
-                }, $this->data());
+                }, $result );
                 break;
             case self::FETCH_SCALAR:
                 if (array_key_exists(0, $result)) {
@@ -481,7 +481,7 @@ class Command extends BaseCommand
      * get meta columns information
      * @return mixed
      */
-    public function meta()
+    public function getMeta()
     {
         $this->ensureQueryExecuted();
         return $this->_meta;
@@ -491,7 +491,7 @@ class Command extends BaseCommand
      * get all data result
      * @return mixed|array
      */
-    public function data()
+    public function getData()
     {
         if($this->_is_result === null && !empty($this->_sql)){
             $this->queryInternal(null);
@@ -503,7 +503,7 @@ class Command extends BaseCommand
     /**
      * @return mixed
      */
-    public function totals()
+    public function getTotals()
     {
         $this->ensureQueryExecuted();
         return $this->_totals;
@@ -513,7 +513,7 @@ class Command extends BaseCommand
     /**
      * @return mixed
      */
-    public function extremes()
+    public function getExtremes()
     {
         $this->ensureQueryExecuted();
         return $this->_extremes;
@@ -523,7 +523,7 @@ class Command extends BaseCommand
      *  get count result items
      * @return mixed
      */
-    public function rows()
+    public function getRows()
     {
         $this->ensureQueryExecuted();
         return $this->_rows;
@@ -533,7 +533,7 @@ class Command extends BaseCommand
      * max count result items
      * @return mixed
      */
-    public function countAll()
+    public function getCountAll()
     {
         $this->ensureQueryExecuted();
         return $this->_rows_before_limit_at_least;
@@ -542,7 +542,7 @@ class Command extends BaseCommand
     /**
      * @return mixed
      */
-    public function statistics()
+    public function getStatistics()
     {
         $this->ensureQueryExecuted();
         return $this->_statistics;

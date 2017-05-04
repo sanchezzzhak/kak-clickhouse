@@ -14,12 +14,12 @@ use yii\db\Exception as DbException;
 /**
  * Class Query
  * @package kak\clickhouse
- * @method countAll() int
- * @method totals() array
- * @method data() array
- * @method extremes() array
- * @method rows() int
- * @method meta() array
+ * @method getCountAll() int
+ * @method getTotals() array
+ * @method getData() array
+ * @method getExtremes() array
+ * @method getRows() int
+ * @method getMeta() array
  */
 class Query extends BaseQuery
 {
@@ -92,19 +92,22 @@ class Query extends BaseQuery
     }
 
     /**
+     * call method Command::{$name}
      * @param $name
      * @return mixed
      */
-    private function getSpecialCommand($name){
+    private function callSpecialCommand($name)
+    {
         $this->ensureQueryExecuted();
         return $this->_command->{$name}();
     }
 
+
     public function __call($name, $params)
     {
-        $methods = [ 'meta', 'data', 'extremes', 'totals', 'countall', 'rows'];
-        if(in_array(strtolower($name),$methods)){
-            return $this->getSpecialCommand($name);
+        $methods = [ 'getmeta', 'getdata', 'getextremes', 'gettotals', 'getcountall', 'getrows'];
+        if (in_array(strtolower( $name), $methods)) {
+            return $this->callSpecialCommand( $name );
         }
         return parent::__call($name, $params);
     }
