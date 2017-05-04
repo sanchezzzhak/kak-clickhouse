@@ -259,6 +259,21 @@ $config['bootstrap'][] = 'debug';
     ];
 ```
 
+Using SqlDataProvider
+=====================
+```php
+$sql = 'select * from stat where counter_id=:counter_id and event_date=:date';
+$provider = new \kak\clickhouse\data\SqlDataProvider([
+    'db' => 'clickhouse',
+    'sql' => $sql,
+    'params' => [
+        ':counter_id' => 1,
+        ':event_date' => date('Y-m-d')
+    ]
+]);
+```
+
+
 ClickHouse Reference Manual
 ===================
 https://clickhouse.yandex/reference_en.html
