@@ -13,6 +13,7 @@ use yii\helpers\Json;
 /**
  * Class Command
  * @package kak\clickhouse
+ * @property $db \kak\clickhouse\Connection
  */
 class Command extends BaseCommand
 {
@@ -28,8 +29,6 @@ class Command extends BaseCommand
     /** @var int fetch type result */
     public $fetchMode = 0;
 
-    private $_sql;
-
     private $_format = null;
 
     private $_pendingParams = [];
@@ -37,7 +36,6 @@ class Command extends BaseCommand
     private $_is_result;
 
     private $_options =[];
-
 
     /**
      * @var
@@ -146,33 +144,6 @@ class Command extends BaseCommand
         $this->queryCacheDuration = -1;
         return $this;
     }
-    
-    /**
-     * Returns the SQL statement for this command.
-     * @return string the SQL statement to be executed
-     */
-    public function getSql()
-    {
-        return $this->_sql;
-    }
-    
-    /**
-     * Specifies the SQL statement to be executed.
-     * The previous SQL execution (if any) will be cancelled, and [[params]] will be cleared as well.
-     * @param string $sql the SQL statement to be set.
-     * @return $this this command instance
-     */
-    public function setSql($sql)
-    {
-        if ($sql !== $this->_sql) {
-            $this->_sql = $this->db->quoteSql($sql);
-            $this->_pendingParams = [];
-            $this->params = [];
-        }
-        return $this;
-    }
-
-
 
     public function bindValues($values)
     {
@@ -212,25 +183,10 @@ class Command extends BaseCommand
         return $response;
     }
 
-    /**
-     * @param null $fetchMode
-     * @return array|mixed
-     */
-    public function queryAll($fetchMode = null)
-    {
-        return $this->queryInternal(self::FETCH_ALL, $fetchMode);
-    }
 
     /**
-     * @param null $fetchMode
      * @return array|mixed
      */
-    public function queryOne($fetchMode = null)
-    {
-        return $this->queryInternal(self::FETCH, $fetchMode);
-    }
-
-
     public function queryColumn()
     {
         return $this->queryInternal(self::FETCH_COLUMN);
@@ -252,7 +208,7 @@ class Command extends BaseCommand
     public function getRawSql()
     {
         if (empty($this->params)) {
-            return $this->_sql;
+            return $this->getSql();
         }
         $params = [];
         foreach ($this->params as $name => $value) {
@@ -270,10 +226,10 @@ class Command extends BaseCommand
             }
         }
         if (!isset($params[1])) {
-            return strtr($this->_sql, $params);
+            return strtr($this->getSql(), $params);
         }
         $sql = '';
-        foreach (explode('?', $this->_sql) as $i => $part) {
+        foreach (explode('?', $this->getSql()) as $i => $part) {
             $sql .= (isset($params[$i]) ? $params[$i] : '') . $part;
         }
         return $sql;
@@ -310,7 +266,6 @@ class Command extends BaseCommand
     {
 
         $rawSql = $this->getRawSql();
-
         if ( $method ==  self::FETCH ) {
 
             if (preg_match('#^SELECT#is', $rawSql) && !preg_match('#LIMIT#is', $rawSql)) {
@@ -342,7 +297,7 @@ class Command extends BaseCommand
             }
 
             if($fetchMode == self::FETCH_MODE_TOTAL){
-                return $this->totals();
+                return $this->getTotals();
             }
 
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
@@ -360,13 +315,13 @@ class Command extends BaseCommand
     protected function getStatementData($result)
     {
         return [
-            'meta' => $this->meta(),
+            'meta' => $this->getMeta(),
             'data' => $result,
-            'rows' => $this->rows(),
-            'countAll' => $this->countAll(),
-            'totals' => $this->totals(),
-            'statistics' => $this->statistics(),
-            'extremes' => $this->extremes(),
+            'rows' => $this->getRows(),
+            'countAll' => $this->getCountAll(),
+            'totals' => $this->getTotals(),
+            'statistics' => $this->getStatistics(),
+            'extremes' => $this->getExtremes(),
         ];
     }
 
@@ -477,7 +432,7 @@ class Command extends BaseCommand
      */
     public function getData()
     {
-        if($this->_is_result === null && !empty($this->_sql)){
+        if($this->_is_result === null && !empty($this->getSql())){
             $this->queryInternal(null);
         }
         $this->ensureQueryExecuted();
