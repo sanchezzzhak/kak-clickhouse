@@ -42,25 +42,9 @@ class Query extends BaseQuery
         }
         list ($sql, $params) = $db->getQueryBuilder()->build($this);
 
-        return $this->_command = $db->createCommand($sql, $params);
-    }
 
-    /**
-     * @param null $db
-     * @return array|mixed
-     */
-    public function one($db = null)
-    {
-        return $this->createCommand($db)->queryOne();
-    }
-
-    /**
-     * @param null $db
-     * @return array|mixed
-     */
-    public function all($db = null )
-    {
-        return $this->createCommand($db)->queryAll();
+        $this->_command = $db->createCommand($sql, $params);
+        return $this->_command;
     }
 
     /**

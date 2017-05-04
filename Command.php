@@ -310,6 +310,7 @@ class Command extends BaseCommand
     {
 
         $rawSql = $this->getRawSql();
+
         if ( $method ==  self::FETCH ) {
 
             if (preg_match('#^SELECT#is', $rawSql) && !preg_match('#LIMIT#is', $rawSql)) {

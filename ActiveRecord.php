@@ -1,8 +1,6 @@
 <?php
 namespace kak\clickhouse;
-use yii\base\InvalidConfigException;
 use Yii;
-use yii\db\TableSchema;
 
 class ActiveRecord extends yii\db\ActiveRecord
 {
@@ -23,7 +21,7 @@ class ActiveRecord extends yii\db\ActiveRecord
      */
     public static function find()
     {
-        return Yii::createObject(self::className(), [get_called_class()]);
+        return Yii::createObject(ActiveQuery::className(), [get_called_class()]);
     }
 
     /**
@@ -40,6 +38,7 @@ class ActiveRecord extends yii\db\ActiveRecord
         // TODO: Implement primaryKey() method.
         return null;
     }
+
 
     /**
      * Inserts the record into the database using the attribute values of this record.

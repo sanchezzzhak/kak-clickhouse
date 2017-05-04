@@ -6,6 +6,18 @@ use yii\db\QueryBuilder as BaseQueryBuilder;
 
 class QueryBuilder extends BaseQueryBuilder
 {
+
+    /**
+     * Constructor.
+     * @param Connection $connection the database connection.
+     * @param array $config name-value pairs that will be used to initialize the object properties
+     */
+    public function __construct($connection, $config = [])
+    {
+        $this->db = $connection;
+        parent::__construct($connection, $config);
+    }
+
     /**
      * Clickhouse data types
      */
@@ -27,6 +39,15 @@ class QueryBuilder extends BaseQueryBuilder
         Schema::TYPE_MONEY => 'Float32',
     ];
 
+    private function prepareFromByModel($query)
+    {
+        if(empty($query->from) && $query instanceof ActiveQuery && !empty($query->modelClass)){
+            $query->from = [$query->modelClass::tableName()];
+        }
+    }
+
+
+
     /**
      * Generates a SELECT SQL statement from a [[Query]] object.
      * @param Query $query the [[Query]] object from which the SQL statement will be generated.
@@ -41,6 +62,8 @@ class QueryBuilder extends BaseQueryBuilder
         $query = $query->prepare($this);
 
         $params = empty($params) ? $query->params : array_merge($params, $query->params);
+
+        $this->prepareFromByModel($query);
 
         $clauses = [
             $this->buildSelect($query->select, $params, $query->distinct, $query->selectOption),
