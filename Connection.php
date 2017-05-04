@@ -14,21 +14,14 @@ use Yii;
  */
 class Connection extends \yii\db\Connection
 {
-    public $tablePrefix;
     /**
      * @event Event an event that is triggered after a DB connection is established
      */
     const EVENT_AFTER_OPEN = 'afterOpen';
 
     /**
-     * @var string the username for establishing DB connection. Defaults to `null` meaning no username to use.
+     * @var string name use database default use value  "default"
      */
-    public $username;
-    /**
-     * @var string the password for establishing DB connection. Defaults to `null` meaning no password to use.
-     */
-    public $password;
-
     public $database;
 
     /**
@@ -41,56 +34,17 @@ class Connection extends \yii\db\Connection
      */
     public $port = 8123;
 
-    /**
-     * @var Cache|string the cache object or the ID of the cache application component
-     * that is used for query caching.
-     * @see enableQueryCache
-     */
-    public $queryCache = 'cache';
-
-    /**
-     * @var boolean whether to enable schema caching.
-     * Note that in order to enable truly schema caching, a valid cache component as specified
-     * by [[schemaCache]] must be enabled and [[enableSchemaCache]] must be set true.
-     * @see schemaCacheDuration
-     * @see schemaCacheExclude
-     * @see schemaCache
-     */
-    public $enableSchemaCache = false;
-
-    /**
-     * @var boolean whether to enable query caching.
-     * Note that in order to enable query caching, a valid cache component as specified
-     * by [[queryCache]] must be enabled and [[enableQueryCache]] must be set true.
-     * Also, only the results of the queries enclosed within [[cache()]] will be cached.
-     * @see queryCache
-     * @see cache()
-     * @see noCache()
-     */
-    public $enableQueryCache = true;
-
-    /**
-     * @var integer the default number of seconds that query results can remain valid in cache.
-     * Use 0 to indicate that the cached data will never expire.
-     * Defaults to 3600, meaning 3600 seconds, or one hour. Use 0 to indicate that the cached data will never expire.
-     * The value of this property will be used when [[cache()]] is called without a cache duration.
-     * @see enableQueryCache
-     * @see cache()
-     */
-    public $queryCacheDuration = 3600;
 
     /**
      * @var string
      */
-    public $commandClass   = 'kak\clickhouse\Command';
-    public $schemaClass    = 'kak\clickhouse\Schema';
+    public $commandClass = 'kak\clickhouse\Command';
+    public $schemaClass = 'kak\clickhouse\Schema';
     public $transportClass = 'yii\httpclient\CurlTransport';
     public $requestClass = 'kak\clickhouse\httpclient\Request';
 
-
     /** @var bool|Client */
     private $_transport = false;
-
 
     /**
      * @var array query cache parameters for the [[cache()]] calls
@@ -273,7 +227,7 @@ class Connection extends \yii\db\Connection
      */
     public function close()
     {
-        if ($this->_transport !== false) {
+        if ($this->getIsActive()) {
             $connection = ($this->dsn . ':' . $this->port);
             \Yii::trace('Closing DB connection: ' . $connection, __METHOD__);
         }

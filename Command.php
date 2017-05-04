@@ -25,27 +25,9 @@ class Command extends BaseCommand
     const FETCH_MODE_TOTAL = 7;
     const FETCH_MODE_ALL = 8;
 
+    /** @var int fetch type result */
+    public $fetchMode = 0;
 
-    /*** @var Connection */
-    public $db;
-
-
-    public $params = [];
-    
-    /**
-     * @var integer the default number of seconds that query results can remain valid in cache.
-     * Use 0 to indicate that the cached data will never expire. And use a negative number to indicate
-     * query cache should not be used.
-     * @see cache()
-     */
-    public $queryCacheDuration;
-    /**
-     * @var \yii\caching\Dependency the dependency to be associated with the cached query result for this command
-     * @see cache()
-     */
-    public $queryCacheDependency;
-    
-    
     private $_sql;
 
     private $_format = null;
@@ -329,6 +311,7 @@ class Command extends BaseCommand
 
         $rawSql = $this->getRawSql();
         if ( $method ==  self::FETCH ) {
+
             if (preg_match('#^SELECT#is', $rawSql) && !preg_match('#LIMIT#is', $rawSql)) {
                 $rawSql.=' LIMIT 1';
             }

@@ -2,6 +2,10 @@
 namespace kak\clickhouse;
 use yii\db\ActiveQueryInterface;
 
+/**
+ * Class ActiveQuery
+ * @package kak\clickhouse
+ */
 class ActiveQuery extends \yii\db\ActiveQuery implements ActiveQueryInterface
 {
     /**
@@ -15,7 +19,7 @@ class ActiveQuery extends \yii\db\ActiveQuery implements ActiveQueryInterface
      */
     public function count($q = '', $db = null)
     {
-        return parent::count($q,$db);
+        return parent::count($q, $db);
     }
 
 
