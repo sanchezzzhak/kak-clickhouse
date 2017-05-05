@@ -30,6 +30,12 @@ class Query extends BaseQuery
     private $_withTotals = false;
 
     /**
+     * @var null
+     */
+    public $sample = null;
+    public $preWhere = null;
+
+    /**
      * Creates a DB command that can be used to execute this query.
      * @param \kak\clickhouse\Connection $db the database connection used to generate the SQL statement.
      * If this parameter is not given, the `db` application component will be used.
@@ -46,6 +52,40 @@ class Query extends BaseQuery
         $this->_command = $db->createCommand($sql, $params);
         return $this->_command;
     }
+
+    /**
+     * set section query SAMPLE
+     * @param $n float|int  set value 0.1 .. 1 percent or int 1 .. 1m value
+     */
+    public function sample($n)
+    {
+        $this->sample = $n;
+    }
+
+
+    /**
+     * Sets the PREWHERE part of the query.
+     *
+     * The method requires a `$condition` parameter, and optionally a `$params` parameter
+     * specifying the values to be bound to the query.
+     *
+     * The `$condition` parameter should be either a string (e.g. `'id=1'`) or an array.
+     *
+     * @inheritdoc
+     *
+     * @param string|array|Expression $condition the conditions that should be put in the WHERE part.
+     * @param array $params the parameters (name => value) to be bound to the query.
+     * @return $this the query object itself
+     *** see andWhere()
+     *** see orWhere()
+     */
+    public function preWhere($condition, $params = [])
+    {
+        $this->preWhere = $condition;
+        $this->addParams($params);
+        return $this;
+    }
+
 
     /**
      * @return $this
