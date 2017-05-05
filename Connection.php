@@ -43,6 +43,11 @@ class Connection extends \yii\db\Connection
     public $transportClass = 'yii\httpclient\CurlTransport';
     public $requestClass = 'kak\clickhouse\httpclient\Request';
 
+    public $schemaMap = [
+        'clickhouse' => 'kak\clickhouse\Schema'
+    ];
+
+
     /** @var bool|Client */
     private $_transport = false;
 
@@ -225,6 +230,7 @@ class Connection extends \yii\db\Connection
     {
         return $name;
     }
+
     /**
      * Returns the query builder for the current DB connection.
      * @return QueryBuilder the query builder for the current DB connection.
