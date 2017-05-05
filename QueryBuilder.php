@@ -42,7 +42,8 @@ class QueryBuilder extends BaseQueryBuilder
     private function prepareFromByModel($query)
     {
         if(empty($query->from) && $query instanceof ActiveQuery && !empty($query->modelClass)){
-            $query->from = [$query->modelClass::tableName()];
+            $modelClass = $query->modelClass;
+            $query->from = [ call_user_func($modelClass . '::tableName') ];
         }
     }
 
