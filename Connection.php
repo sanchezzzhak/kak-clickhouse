@@ -46,11 +46,6 @@ class Connection extends \yii\db\Connection
     /** @var bool|Client */
     private $_transport = false;
 
-    /**
-     * @var array query cache parameters for the [[cache()]] calls
-     */
-    private $_queryCacheInfo = [];
-
     private $_schema;
 
     /**
@@ -134,45 +129,6 @@ class Connection extends \yii\db\Connection
         . $parsed['path']
         . $parsed['query'];
     }
-
-
-    /**
-     * Returns the current query cache information.
-     * This method is used internally by [[Command]].
-     * @param integer $duration the preferred caching duration. If null, it will be ignored.
-     * @param \yii\caching\Dependency $dependency the preferred caching dependency. If null, it will be ignored.
-     * @return array the current query cache information, or null if query cache is not enabled.
-     */
-    public function getQueryCacheInfo($duration, $dependency)
-    {
-        if (!$this->enableQueryCache) {
-            return null;
-        }
-
-        $info = end($this->_queryCacheInfo);
-        if (is_array($info)) {
-            if ($duration === null) {
-                $duration = $info[0];
-            }
-            if ($dependency === null) {
-                $dependency = $info[1];
-            }
-        }
-
-        if ($duration === 0 || $duration > 0) {
-            if (is_string($this->queryCache) && Yii::$app) {
-                $cache = \Yii::$app->get($this->queryCache, false);
-            } else {
-                $cache = $this->queryCache;
-            }
-            if ($cache instanceof Cache) {
-                return [$cache, $duration, $dependency];
-            }
-        }
-
-        return null;
-    }
-
 
 
     /**
@@ -264,7 +220,6 @@ class Connection extends \yii\db\Connection
     {
         return 'clickhouse';
     }
-
 
     public function quoteColumnName($name)
     {
