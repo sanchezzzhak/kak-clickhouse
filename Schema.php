@@ -138,7 +138,6 @@ class Schema extends \yii\db\Schema
      */
     protected function loadTableSchema($name)
     {
-
         $sql = 'SELECT * FROM system.columns WHERE table=:name FORMAT JSON';
         $result = $this->db->createCommand($sql, [':name' => $name])->queryAll();
 
@@ -165,7 +164,6 @@ class Schema extends \yii\db\Schema
      */
     protected function loadColumnSchema($info)
     {
-
         $column = $this->createColumnSchema();
         $column->name = $info['name'];
         $column->dbType = $info['type'];
@@ -191,6 +189,6 @@ class Schema extends \yii\db\Schema
      */
     protected function createColumnSchema()
     {
-        return Yii::createObject('yii\db\ColumnSchema');
+        return Yii::createObject('kak\clickhouse\ColumnSchema');
     }
 }

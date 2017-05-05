@@ -26,6 +26,9 @@ to the require section of your composer.json
            // 'database' => 'default',  // use other database name
             'username' => 'web',
             'password' => '123',
+            'enableSchemaCache' => true,
+            'schemaCache' => 'cache',
+            'schemaCacheDuration' => 86400
         ],
    // ...     
 ```
@@ -268,7 +271,7 @@ $provider = new \kak\clickhouse\data\SqlDataProvider([
     'sql' => $sql,
     'params' => [
         ':counter_id' => 1,
-        ':event_date' => date('Y-m-d')
+        ':date' => date('Y-m-d')
     ]
 ]);
 ```
