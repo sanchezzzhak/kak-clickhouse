@@ -120,37 +120,11 @@ class Command extends BaseCommand
         return $this;
     }
 
-    /**
-     * Enables query cache for this command.
-     * @param integer $duration the number of seconds that query result of this command can remain valid in the cache.
-     * If this is not set, the value of [[Connection::queryCacheDuration]] will be used instead.
-     * Use 0 to indicate that the cached data will never expire.
-     * @param \yii\caching\Dependency $dependency the cache dependency associated with the cached query result.
-     * @return $this the command object itself
-     */
-    public function cache($duration = null, $dependency = null)
-    {
-        $this->queryCacheDuration = $duration === null ? $this->db->queryCacheDuration : $duration;
-        $this->queryCacheDependency = $dependency;
-        return $this;
-    }
-    
-    /**
-     * Disables query cache for this command.
-     * @return $this the command object itself
-     */
-    public function noCache()
-    {
-        $this->queryCacheDuration = -1;
-        return $this;
-    }
-
     public function bindValues($values)
     {
         if (empty($values)) {
             return $this;
         }
-        
         //$schema = $this->db->getSchema();
         foreach ($values as $name => $value) {
             if (is_array($value)) {
@@ -236,38 +210,13 @@ class Command extends BaseCommand
     }
 
 
-    //private function getQueryCacheData($method, $fetchMode, $rawSql)
-    //{
-    //    if ($method !== '') {
-    //        $info = $this->db->getQueryCacheInfo($this->queryCacheDuration, $this->queryCacheDependency);
-    //        if (is_array($info)) {
-    //            /* @var $cache \yii\caching\Cache */
-    //            $cache = $info[0];
-    //            $cacheKey = [
-    //                __CLASS__,
-    //                $method,
-    //                $fetchMode,
-    //                $this->db->dsn,
-    //                $this->db->username,
-    //                $rawSql,
-    //            ];
-    //            $result = $cache->get($cacheKey);
-    //            if (is_array($result) && isset($result[0])) {
-    //                Yii::trace('Query result served from cache', 'kak\clickhouse\Command::query');
-    //                return $this->parseResponse($result, $method);
-    //            }
-    //        }
-    //    }
-    //    return null;
-    //}
 
-    
+
     protected function queryInternal($method, $fetchMode = null)
     {
 
         $rawSql = $this->getRawSql();
         if ( $method ==  self::FETCH ) {
-
             if (preg_match('#^SELECT#is', $rawSql) && !preg_match('#LIMIT#is', $rawSql)) {
                 $rawSql.=' LIMIT 1';
             }
@@ -275,10 +224,31 @@ class Command extends BaseCommand
         if ($this->getFormat()===null && strpos($rawSql, 'FORMAT ')===false) {
             $rawSql.=' FORMAT JSON';
         }
-
         \Yii::info($rawSql, 'kak\clickhouse\Command::query');
+
+
+        if ($method !== '') {
+            $info = $this->db->getQueryCacheInfo($this->queryCacheDuration, $this->queryCacheDependency);
+            if (is_array($info)) {
+                /* @var $cache \yii\caching\Cache */
+                $cache = $info[0];
+                $cacheKey = [
+                    __CLASS__,
+                    $method,
+                    $fetchMode,
+                    $this->db->dsn,
+                    $this->db->username,
+                    $rawSql,
+                ];
+                $result = $cache->get($cacheKey);
+                if (is_array($result) && isset($result[0])) {
+                    Yii::trace('Query result served from cache', 'kak\clickhouse\Command::query');
+                    return $this->prepareResult($result[0], $method, $fetchMode);
+                }
+            }
+        }
+
         $token = $rawSql;
-        
         try {
             Yii::beginProfile($token, 'kak\clickhouse\Command::query');
 
@@ -288,23 +258,23 @@ class Command extends BaseCommand
                 ->setMethod('POST')
                 ->setContent($rawSql)
                 ->send();
-            
+
             $this->checkResponseStatus($response);
-            $result = $this->parseResponse($response, $method);
 
-            if($fetchMode == self::FETCH_MODE_ALL){
-                return $this->getStatementData($result);
-            }
-
-            if($fetchMode == self::FETCH_MODE_TOTAL){
-                return $this->getTotals();
-            }
+            $data = $this->parseResponse($response);
+            $result = $this->prepareResult($data, $method, $fetchMode);
 
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
         } catch (\Exception $e) {
             Yii::endProfile($token, 'kak\clickhouse\Command::query');
             throw new Exception("Query error: ".$e->getMessage());
         }
+
+        if (isset($cache, $cacheKey, $info)) {
+            $cache->set($cacheKey, [$data], $info[1], $info[2]);
+            Yii::trace('Saved query result in cache', 'kak\clickhouse\Command::query');
+        }
+
         return $result;
     }
 
@@ -346,28 +316,9 @@ class Command extends BaseCommand
         }
     }
     
-    
-    /**
-     * Parse response with data
-     * @param \yii\httpclient\Response $response
-     * @param null|string $method
-     * @param bool $prepareResponse
-     * @return mixed|array
-     */
-    private function parseResponse(\yii\httpclient\Response $response, $method = null )
-    {
-        $contentType = $response
-            ->getHeaders()
-            ->get('Content-Type');
-        
-        list($type) = explode(';', $contentType);
-        
-        $type = strtolower($type);
-        $hash = [
-            'application/json' => 'parseJson'
-        ];
 
-        $result = (isset($hash[$type]))? $this->{$hash[$type]}($response->content) : $response->content;
+    private function prepareResult($result, $method = null, $fetchMode = null)
+    {
         $this->prepareResponseData($result);
         $result = ArrayHelper::getValue($result,'data',[]);
         switch ($method) {
@@ -386,6 +337,39 @@ class Command extends BaseCommand
                 break;
         }
 
+        if($fetchMode == self::FETCH_MODE_ALL){
+            return $this->getStatementData($result);
+        }
+
+        if($fetchMode == self::FETCH_MODE_TOTAL){
+            return $this->getTotals();
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * Parse response with data
+     * @param \yii\httpclient\Response $response
+     * @param null|string $method
+     * @param bool $prepareResponse
+     * @return mixed|array
+     */
+    private function parseResponse(\yii\httpclient\Response $response)
+    {
+        $contentType = $response
+            ->getHeaders()
+            ->get('Content-Type');
+        
+        list($type) = explode(';', $contentType);
+        
+        $type = strtolower($type);
+        $hash = [
+            'application/json' => 'parseJson'
+        ];
+
+        $result = (isset($hash[$type]))? $this->{$hash[$type]}($response->content) : $response->content;
         return  $result;
     }
 
@@ -394,7 +378,6 @@ class Command extends BaseCommand
         if(!is_array($result)){
             return;
         }
-
         $this->_is_result = true;
         foreach (['meta', 'data', 'totals', 'extremes', 'rows', 'rows_before_limit_at_least','statistics'] as $key) {
             if (isset($result[$key])) {
