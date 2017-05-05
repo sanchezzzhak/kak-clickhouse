@@ -2,7 +2,7 @@
 namespace kak\clickhouse;
 use Yii;
 
-class ActiveRecord extends yii\db\ActiveRecord
+class ActiveRecord extends \yii\db\ActiveRecord
 {
 
 
