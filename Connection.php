@@ -160,13 +160,14 @@ class Connection extends \yii\db\Connection
     public function ping()
     {
         $this->open();
-        $query = 'SELECT 1 FROM';
+        $query = 'SELECT 1';
         $response = $this->transport
             ->createRequest()
             ->setHeaders(['Content-Type: application/x-www-form-urlencoded'])
             ->setMethod('POST')
             ->setContent($query)
             ->send();
+
         return trim($response->content) == '1';
     }
 
