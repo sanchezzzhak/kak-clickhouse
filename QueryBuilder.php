@@ -69,7 +69,9 @@ class QueryBuilder extends BaseQueryBuilder
         $clauses = [
             $this->buildSelect($query->select, $params, $query->distinct, $query->selectOption),
             $this->buildFrom($query->from, $params),
+            $this->buildSample($query->sample),
             $this->buildJoin($query->join, $params),
+            $this->buildPreWhere($query->preWhere, $params),
             $this->buildWhere($query->where, $params),
             $this->buildGroupBy($query->groupBy),
             $this->buildHaving($query->having, $params),
@@ -104,13 +106,32 @@ class QueryBuilder extends BaseQueryBuilder
 
     /**
      * @param string|array $condition
-     * @return string the WITH TOTALS clause built from [[Query::$withTotals]].
+     * @return string the WITH TOTALS
      */
     public function buildWithTotals($condition)
     {
         return $condition === true ? ' WITH TOTALS ' : '';
     }
 
+    /**
+     * @param string|array $condition
+     * @param array $params the binding parameters to be populated
+     * @return string the PREWHERE clause built from [[Query::$preWhere]].
+     */
+    public function buildPreWhere($condition, &$params)
+    {
+        $where = $this->buildCondition($condition, $params);
+        return $where === '' ? '' : 'PREWHERE ' . $where;
+    }
+
+    /**
+     * @param string|array $condition
+     * @return string the SAMPLE clause built from [[Query::$sample]].
+     */
+    public function buildSample($condition)
+    {
+        return $condition !== null ? ' SAMPLE ' . $condition : '';
+    }
 
     /**
      * Set default engine option if don't set
