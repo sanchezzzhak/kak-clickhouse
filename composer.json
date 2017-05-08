@@ -29,5 +29,10 @@
         "psr-4": {
             "kak\\clickhouse\\": ""
         }
+    },
+    "archive": {
+        "exclude": [
+            "tests/*"
+        ]
     }
 }
