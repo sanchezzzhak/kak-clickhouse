@@ -1,9 +1,10 @@
 <?php
-include_once "models\TestTableModel.php";
+
+
+
 
 class ClickHouseTest extends \yii\codeception\TestCase
 {
-
     public $appConfig = '@tests/_config/unit.php';
 
     /**
@@ -13,7 +14,6 @@ class ClickHouseTest extends \yii\codeception\TestCase
     {
         return Yii::$app->clickhouse;
     }
-
 
     /**
      * @var \UnitTester
@@ -26,21 +26,34 @@ class ClickHouseTest extends \yii\codeception\TestCase
 
     protected function _after()
     {
+
     }
 
 
-    public function testPing(){
 
-      //  $this->assertTrue($this->getDb()->ping(), 'call ping success result');
-    }
 
-    public function testActiveRecordQueryBuild()
+    public function testPreWhereQuery()
     {
-        $query = tests\models\TestTableModel::find();
+        $table = TestTableModel::tableName();
+        $query = ( new \kak\clickhouse\Query())->select('*');
 
-        var_dump($query->where(['user_id' => 1])->createCommand()->getRawSql());
+        $query->from($table);
+        $query->preWhere(['user_id' => 2]);
+        $query->orPreWhere('user_id=3');
+        $query->where('user_id > 1');
+
+        $sql = $query->createCommand()->getRawSql();
+        $result = "SELECT * FROM test_stat PREWHERE (user_id=2) OR (user_id=3) WHERE user_id > 1";
+
+        $this->assertTrue($sql === $result ,'build query PREWHERE check false');
+
+        $copy = clone $query;
+        $sql = $copy->createCommand()->getRawSql();
+        $this->assertTrue($sql === $result ,'build copy query PREWHERE check false');
 
     }
+
+
 
 
 }

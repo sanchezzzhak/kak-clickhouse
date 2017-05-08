@@ -88,6 +88,49 @@ class Query extends BaseQuery
 
 
     /**
+     * Adds an additional PREWHERE condition to the existing one.
+     * The new condition and the existing one will be joined using the 'AND' operator.
+     * @param string|array|Expression $condition the new WHERE condition. Please refer to [[where()]]
+     * on how to specify this parameter.
+     * @param array $params the parameters (name => value) to be bound to the query.
+     * @return $this the query object itself
+     * @see preWhere()
+     * @see orPreWhere()
+     */
+    public function andPreWhere($condition, $params = [])
+    {
+        if ($this->preWhere === null) {
+            $this->preWhere = $condition;
+        } else {
+            $this->preWhere = ['and', $this->preWhere, $condition];
+        }
+        $this->addParams($params);
+        return $this;
+    }
+
+    /**
+     * Adds an additional PREWHERE condition to the existing one.
+     * The new condition and the existing one will be joined using the 'OR' operator.
+     * @param string|array|Expression $condition the new WHERE condition. Please refer to [[where()]]
+     * on how to specify this parameter.
+     * @param array $params the parameters (name => value) to be bound to the query.
+     * @return $this the query object itself
+     * @see preWhere()
+     * @see andPreWhere()
+     */
+    public function orPreWhere($condition, $params = [])
+    {
+        if ($this->preWhere === null) {
+            $this->preWhere = $condition;
+        } else {
+            $this->preWhere = ['or', $this->preWhere, $condition];
+        }
+        $this->addParams($params);
+        return $this;
+    }
+
+
+    /**
      * @return $this
      */
     public function withTotals()
