@@ -29,14 +29,29 @@ class ClickHouseTest extends \yii\codeception\TestCase
 
     }
 
+    public function testSampleSectionQuery()
+    {
+        $table = TestTableModel::tableName();
+        $sample = 0.5;
+        $query = ( new \kak\clickhouse\Query())->select('*');
+        $query->from($table);
+        $query->sample($sample);
+        $query->where(['user_id' => 1 ]);
+
+        $result = "SELECT * FROM test_stat  SAMPLE 0.5 WHERE user_id=1";
+        $sql = $query->createCommand()->getRawSql();
+        $this->assertTrue($sql === $result ,'build query SAMPLE (generation sql builder) check false');
+
+        $sql = TestTableModel::find()->sample($sample)->where(['user_id' => 1])->createCommand()->getRawSql();
+        $this->assertTrue($sql === $result ,'build query SAMPLE (generation active record builder) check false');
+
+    }
 
 
-
-    public function testPreWhereQuery()
+    public function testPreWhereSectionQuery()
     {
         $table = TestTableModel::tableName();
         $query = ( new \kak\clickhouse\Query())->select('*');
-
         $query->from($table);
         $query->preWhere(['user_id' => 2]);
         $query->orPreWhere('user_id=3');

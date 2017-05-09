@@ -56,10 +56,12 @@ class Query extends BaseQuery
     /**
      * set section query SAMPLE
      * @param $n float|int  set value 0.1 .. 1 percent or int 1 .. 1m value
+     * @return $this the query object itself
      */
     public function sample($n)
     {
         $this->sample = $n;
+        return $this;
     }
 
 
