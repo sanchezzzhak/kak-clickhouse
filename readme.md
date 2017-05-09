@@ -276,6 +276,45 @@ $provider = new \kak\clickhouse\data\SqlDataProvider([
 ]);
 ```
 
+Using Migration Data
+=====================
+convert schema mysql >>> clickhouse <br>
+create custom console controller 
+```php
+    // ...
+    public function actionIndex()
+    {
+        $exportSchemaCommand = new \kak\clickhouse\console\MigrationSchemaCommand([
+            'sourceTable' => 'stat',
+            'sourceDb' => \Yii::$app->db,
+            'excludeSourceColumns' => [
+                'id',
+            ]
+            'columns' => [
+                '`event_date` Date' 
+            ]
+        ]);
+        // result string SQL schema  
+        $sql = $exportSchemaCommand->getTableSqlSchema();
+        var_dump($sql);
+    }    
+```
+migration mysql data >>> clickhouse <br>
+create custom console controller 
+```php
+  // ...
+    public function actionIndex()
+    {
+        $exportDataCommand = new \kak\clickhouse\console\MigrationDataCommand([
+            'sourceTable' => 'stat',
+            'sourceDb' => \Yii::$app->db,
+            'storeTable' => 'test_stat',
+            'storeDb' => \Yii::$app->clickhouse,
+            'batchSize' => 10000
+        ]);
+        $exportDataCommand->run();  
+    }
+```
 
 ClickHouse Reference Manual
 ===================
