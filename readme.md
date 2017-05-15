@@ -307,7 +307,7 @@ create custom console controller
     public function actionIndex()
     {
         $exportDataCommand = new \kak\clickhouse\console\MigrationDataCommand([
-            'sourceTable' => 'stat',
+            'sourceQuery' => (new Query())->select('*')->from('stat'),
             'sourceDb' => \Yii::$app->db,
             'storeTable' => 'test_stat',
             'storeDb' => \Yii::$app->clickhouse,

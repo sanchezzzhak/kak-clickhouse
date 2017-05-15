@@ -144,12 +144,8 @@ class Connection extends \yii\db\Connection
      */
     public function quoteValue($str)
     {
-        if (!is_string($str) && !is_int($str)) {
-            return $str;
-        }
-        return "'" . addcslashes($str, "\000\n\r\\\032\047") . "'";
+        return $this->getSchema()->quoteValue($str);
     }
-
 
     public function quoteSql($sql)
     {

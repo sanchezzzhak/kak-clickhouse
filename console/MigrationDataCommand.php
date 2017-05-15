@@ -87,7 +87,7 @@ class MigrationDataCommand extends Object
     {
         $column = isset($this->_schema->columns[$key]) ? $this->_schema->columns[$key] : null;
         if($column!==null) {
-            $val = $this->sourceDb->quoteValue($column->phpTypecast($val));
+            $val = $this->storeDb->quoteValue($column->phpTypecast($val));
         }
         return $val;
     }

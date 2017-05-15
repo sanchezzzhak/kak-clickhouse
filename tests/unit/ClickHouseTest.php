@@ -29,6 +29,21 @@ class ClickHouseTest extends \yii\codeception\TestCase
 
     }
 
+    public function testQuoteValues()
+    {
+        $result = "'test'";
+        $this->assertTrue($this->getDb()->quoteValue('test') === $result,'quote string ' . $result);
+        $result = $this->getDb()->quoteValue(5);
+        $this->assertTrue(5 === $result ,'no quote integer ' . $result);
+        $result = $this->getDb()->quoteValue(.4);
+        $this->assertTrue($result === .4 ,'no quote float ' . $result);
+
+        $result = "SELECT * FROM test_stat WHERE user_id=1";
+        $sql = TestTableModel::find()->where(['user_id' => '1'])->createCommand()->getRawSql();
+        $this->assertFalse($result === $sql ,'sql quote error' . $sql);
+    }
+
+
     public function testSampleSectionQuery()
     {
         $table = TestTableModel::tableName();
