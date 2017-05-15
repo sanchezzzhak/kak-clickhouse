@@ -25,6 +25,8 @@ class MigrationDataCommand extends Object
 
     /** @var string source table name */
     public $sourceTable;
+    /** @var \yii\db\Query */
+    public $sourceQuery;
     /** @var \yii\db\Connection */
     public $sourceDb;
     /** @var bool expand aggregate data to not aggregate save */
@@ -39,7 +41,7 @@ class MigrationDataCommand extends Object
 
 
     /** @var array  'store_column' => 'source_column' */
-    public $mapSchemaData = [
+    public $mapData = [
 
     ];
 
@@ -58,7 +60,7 @@ class MigrationDataCommand extends Object
     private function prepareExportData($row)
     {
         $out = [];
-        foreach ($this->mapSchemaData as $key => $item){
+        foreach ($this->mapData as $key => $item){
             $val = '';
             if($item instanceof \Closure){
                 $val = call_user_func($item, $row);
@@ -70,7 +72,7 @@ class MigrationDataCommand extends Object
                 $val = $this->castTypeValue($key,$item);
             }
 
-            $out[$key] = $val;
+            $out[$key] = $key.'='.$val;
         }
 
         if ($this->format == self::FORMAT_JSON_EACH_ROW) {
@@ -94,19 +96,54 @@ class MigrationDataCommand extends Object
     /** @var  TableSchema */
     private $_schema;
 
+
+    /**
+     * get total records source table
+     * @return int|string
+     */
+    private function getTotalRows()
+    {
+        if($this->sourceQuery!==null) {
+            $query = clone $this->sourceQuery;
+            return  $query->limit(1)->count('*',$this->sourceDb);
+        }
+        return (new \yii\db\Query())->from($this->sourceTable)->limit(1)->count('*',$this->sourceDb);
+    }
+
+    /**
+     * get records source table
+     * @param $offset
+     * @return array
+     */
+    private function getRows($offset)
+    {
+        if($this->sourceQuery!==null) {
+            $query = clone $this->sourceQuery;
+            return $query->limit($this->batchSize)
+                ->offset($offset)
+                ->all($this->sourceDb);
+        }
+
+        return (new \yii\db\Query())->from($this->sourceTable)
+            ->limit($this->batchSize)
+            ->offset($offset)
+            ->all($this->sourceDb);
+    }
+
+
+    /**
+     */
     public function run()
     {
-        $dir = Yii::getAlias('@app/runtime/clickhouse') . "/". $this->sourceTable . '-to-' .$this->storeTable;
+        $dir = Yii::getAlias('@app/runtime/clickhouse') . "/". $this->storeTable;
         if(!file_exists($dir)){
             echo "create dir " . $dir . "\n";
             FileHelper::createDirectory($dir);
         }
 
         $this->_schema = $this->storeDb->getTableSchema($this->storeTable,true);
-        //var_dump($this->_schema->columns);
-        //var_dump($this->_schema);
+        $countTotal = $this->getTotalRows();
 
-        $countTotal = (new \yii\db\Query())->from($this->sourceTable)->limit(1)->count('id',$this->sourceDb);
         echo "total count rows source table {$countTotal}\n";
         $partCount = ceil($countTotal/ $this->batchSize);
         echo "part data files count {$partCount}\n";
@@ -116,10 +153,7 @@ class MigrationDataCommand extends Object
         $files = [];
         for($i=0; $i < $partCount; $i++) {
             $offset = ($i) * $this->batchSize;
-            $rows = (new \yii\db\Query())->from($this->sourceTable)
-                ->limit($this->batchSize)
-                ->offset($offset)
-                ->all($this->sourceDb);
+            $rows = $this->getRows($offset);
 
             $path = $dir . '/part' . $i. '.data';
             $lines = '';
