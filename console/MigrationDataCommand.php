@@ -22,7 +22,6 @@ class MigrationDataCommand extends Object
     const FORMAT_CSV           = 'CSV';
     const FORMAT_JSON_EACH_ROW = 'JSONEachRow';
 
-
     /** @var string source table name */
     public $sourceTable;
     /** @var \yii\db\Query */
@@ -45,6 +44,9 @@ class MigrationDataCommand extends Object
 
     ];
 
+    /** @var  TableSchema */
+    private $_schema;
+
     public function init()
     {
         parent::init();
@@ -61,7 +63,7 @@ class MigrationDataCommand extends Object
     {
         $out = [];
         foreach ($this->mapData as $key => $item){
-            $val = '';
+            $val = 0;
             if($item instanceof \Closure){
                 $val = call_user_func($item, $row);
                 $val = $this->castTypeValue($key, $val);
@@ -71,15 +73,13 @@ class MigrationDataCommand extends Object
             }else if(isset($this->_schema->columns[$key])) {
                 $val = $this->castTypeValue($key,$item);
             }
-
-            $out[$key] = $key.'='.$val;
+            $out[$key] = $val;
         }
 
         if ($this->format == self::FORMAT_JSON_EACH_ROW) {
             return json_encode($out);
         }
 
-        //FORMAT_CSV
         return implode(',',$out);
     }
 
@@ -91,10 +91,6 @@ class MigrationDataCommand extends Object
         }
         return $val;
     }
-
-
-    /** @var  TableSchema */
-    private $_schema;
 
 
     /**
@@ -130,10 +126,31 @@ class MigrationDataCommand extends Object
             ->all($this->sourceDb);
     }
 
+    private function checkTableSchema()
+    {
+        if(!$this->_schema = $this->storeDb->getTableSchema($this->storeTable,true)){
+            throw new \yii\base\Exception('ClickHouse: table `'.$this->storeTable.'` not found');
+        }
 
-    /**
-     */
-    public function run()
+        // checks columns in table
+        $columns = array_keys($this->mapData);
+        $columnsNotFound = [];
+        foreach ($columns as $columnName){
+            if(!isset($this->_schema->columns[$columnName])){
+                $columnsNotFound[] = $columnName;
+            }
+        }
+
+        if(count($columnsNotFound)  > 0 ) {
+            throw new \yii\base\Exception('ClickHouse: table `'.$this->storeTable.'` columns not found  (' . implode(',',$columnsNotFound) . ')');
+        }
+
+    }
+
+
+
+
+    public function run($insert = true)
     {
         $dir = Yii::getAlias('@app/runtime/clickhouse') . "/". $this->storeTable;
         if(!file_exists($dir)){
@@ -141,31 +158,49 @@ class MigrationDataCommand extends Object
             FileHelper::createDirectory($dir);
         }
 
-        $this->_schema = $this->storeDb->getTableSchema($this->storeTable,true);
+        $this->checkTableSchema();
         $countTotal = $this->getTotalRows();
 
         echo "total count rows source table {$countTotal}\n";
         $partCount = ceil($countTotal/ $this->batchSize);
         echo "part data files count {$partCount}\n";
-        $partCount = 2;
-
+        echo "save files dir: {$dir} \n";
+        echo "parts:\n";
 
         $files = [];
         for($i=0; $i < $partCount; $i++) {
+            $timer = microtime(true);
+            $file = 'part' . $i. '.data';
+            $path = $dir . '/' . $file;
+
             $offset = ($i) * $this->batchSize;
             $rows = $this->getRows($offset);
-
-            $path = $dir . '/part' . $i. '.data';
             $lines = '';
             foreach ($rows as $row){
                 $lines.= $this->prepareExportData($row) . "\n";
             }
-            var_dump($lines);
-
-
             $files[] = $path;
             file_put_contents($path,$lines);
+
+            $timer = sprintf('%0.3f', microtime(true) - $timer);
+            echo " >>> " . $file . " time {$timer} \n";
         }
+
+        if(count($files) && $insert){
+            $keys = [];
+            foreach ($this->mapData as $key => $item){
+                $keys[] = $key;
+            }
+            echo "insert files \n";
+            foreach ($files as $file){
+                $timer = microtime(true);
+                $this->storeDb->createCommand()->batchInsertFiles( $this->storeTable, $keys , [$file], $this->format);
+                $timer = sprintf('%0.3f', microtime(true) - $timer);
+                echo " <<< " . pathinfo($file, PATHINFO_BASENAME) . "  time {$timer}\n";
+            }
+        }
+
+        echo "done\n";
     }
 
 }

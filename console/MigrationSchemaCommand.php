@@ -52,8 +52,9 @@ class MigrationSchemaCommand extends Object
                  $typeSize = ($size > 16) ? 32 : 16;
                  return $unsigned."Int".$typeSize;
             case Schema::TYPE_SMALLINT:
-                $typeSize = ($size > 16) ? 16 : 8;
-                return $unsigned."Int".$typeSize;
+                return $unsigned."Int16";
+            case Schema::TYPE_BOOLEAN:
+                return $unsigned."Int8";
             case Schema::TYPE_MONEY:
             case Schema::TYPE_DECIMAL:
                 $typeSize = $column->precision > 32 ? 64: 32;
@@ -77,7 +78,7 @@ class MigrationSchemaCommand extends Object
      * Get sql schema mysql >  clickhouse table
      * @return bool|string
      */
-    public function getTableSqlSchema()
+    public function run()
     {
         if(!$table = Yii::$app->getDb()->getTableSchema($this->sourceTable, true)){
             return false;

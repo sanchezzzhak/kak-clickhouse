@@ -278,6 +278,7 @@ $provider = new \kak\clickhouse\data\SqlDataProvider([
 
 Using Migration Data
 =====================
+<!--
 convert schema mysql >>> clickhouse <br>
 create custom console controller 
 ```php
@@ -295,11 +296,11 @@ create custom console controller
             ]
         ]);
         // result string SQL schema  
-        $sql = $exportSchemaCommand->getTableSqlSchema();
-        var_dump($sql);
+        $sql = $exportSchemaCommand->run();
+        echo $sql;
     }    
-```
-migration mysql data >>> clickhouse <br>
+``` -->
+migration mysql,mssql data >>> clickhouse <br>
 create custom console controller 
 ```php
   // ...
@@ -310,12 +311,42 @@ create custom console controller
             'sourceDb' => \Yii::$app->db,
             'storeTable' => 'test_stat',
             'storeDb' => \Yii::$app->clickhouse,
-            'batchSize' => 10000
+            'batchSize' => 10000,
+            'mapData' => [
+                // key storeTable column => sourceTable column|call function 
+                'event_date' => function($data){
+                    return date('Y-m-d',strtotime($data['hour_at']));
+                },
+                'time' => function($data){
+                    return strtotime($data['hour_at']);
+                },
+                'user_id' => 'partner_id'
+            ]    
         ]);
         $exportDataCommand->run();  
+     
     }
 ```
+Result 
+```text
+php yii export-test/index
 
+total count rows source table 38585
+part data files count 4
+save files dir: /home/user/test-project/www/runtime/clickhouse/stat
+parts:
+ >>> part0.data time 4.749
+ >>> part1.data time 4.734
+ >>> part2.data time 4.771
+ >>> part3.data time 4.089
+insert files
+ <<< part0.data  time 3.289
+ <<< part1.data  time 2.024
+ <<< part2.data  time 1.938
+ <<< part3.data  time 3.359
+done
+```
+   
 ClickHouse Reference Manual
 ===================
 https://clickhouse.yandex/reference_en.html
