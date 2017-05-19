@@ -60,6 +60,23 @@ class ClickHouseTest extends \yii\codeception\TestCase
         $sql = TestTableModel::find()->sample($sample)->where(['user_id' => 1])->createCommand()->getRawSql();
         $this->assertTrue($sql === $result ,'build query SAMPLE (generation active record builder) check false');
 
+
+
+    }
+
+
+    public function testSampleOffsetSectionQuery(){
+
+        $table = TestTableModel::tableName();
+        $result= "SELECT * FROM test_stat  SAMPLE 1/10 OFFSET 2/10 WHERE user_id=1";
+
+        $query = ( new \kak\clickhouse\Query())->select('*');
+        $query->from($table);
+        $query->sample('1/10 OFFSET 2/10');
+        $query->where(['user_id' => 1 ]);
+        $sql = $query->createCommand()->getRawSql();
+        $this->assertTrue($sql === $result ,'build query SAMPLE (generation sql builder) check false');
+
     }
 
 
