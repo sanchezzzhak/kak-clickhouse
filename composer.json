@@ -19,12 +19,6 @@
         "yiisoft/yii2": "*",
         "yiisoft/yii2-httpclient": "^2.0.0.1"
     },
-    "extra": {
-        "asset-installer-paths": {
-            "npm-asset-library": "vendor/npm",
-            "bower-asset-library": "vendor/bower"
-        }
-    },
     "autoload": {
         "psr-4": {
             "kak\\clickhouse\\": ""
