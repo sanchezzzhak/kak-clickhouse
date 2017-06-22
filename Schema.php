@@ -24,7 +24,7 @@ class Schema extends \yii\db\Schema
         'Float32' => self::TYPE_FLOAT,
         'Float64' => self::TYPE_FLOAT,
         'String' => self::TYPE_STRING,
-        'FixedString' => self::TYPE_STRING,
+        'FixedString' => self::TYPE_CHAR,
         'Date' => self::TYPE_DATE,
         'DateTime' => self::TYPE_DATETIME,
         'Enum' => self::TYPE_STRING,
