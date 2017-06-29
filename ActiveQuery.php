@@ -23,6 +23,18 @@ class ActiveQuery extends Query implements ActiveQueryInterface
         $this->modelClass = $modelClass;
         parent::__construct($config);
     }
+    
+    /**
+    * Creates a DB command that can be used to execute this query.
+    * @param Connection|null $db the DB connection used to create the DB command.
+    * If `null`, the DB connection returned by [[modelClass]] will be used.
+    * @return Command the created DB command instance.
+    */
+    public function createCommand($db = null)
+    {
+        $modelClass = $this->modelClass;
+        return parent::createCommand($db ? $db : $modelClass::getDb());
+    }
 
     /**
      * Returns the number of records.
