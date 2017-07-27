@@ -3,7 +3,7 @@
 
 
 
-class ClickHouseTest extends \yii\codeception\TestCase
+class ClickHouseTest extends \Codeception\Test\Unit
 {
     public $appConfig = '@tests/_config/unit.php';
 
