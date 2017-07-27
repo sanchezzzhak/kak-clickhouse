@@ -98,7 +98,7 @@ class QueryBuilder extends BaseQueryBuilder
 
         $union = $this->buildUnion($query->union, $params);
         if ($union !== '') {
-            $sql = "($sql){$this->separator}$union";
+            $sql = "$sql{$this->separator}$union";
         }
 
         return [$sql, $params];
@@ -191,7 +191,32 @@ class QueryBuilder extends BaseQueryBuilder
 
         return ltrim($sql);
     }
-    
+
+    /**
+     * @param array $unions
+     * @param array $params the binding parameters to be populated
+     * @return string the UNION clause built from [[Query::$union]].
+     */
+    public function buildUnion($unions, &$params)
+    {
+        if (empty($unions)) {
+            return '';
+        }
+
+        $result = '';
+
+        foreach ($unions as $i => $union) {
+            $query = $union['query'];
+            if ($query instanceof Query) {
+                list($unions[$i]['query'], $params) = $this->build($query, $params);
+            }
+
+            $result .= 'UNION ' . ($union['all'] ? 'ALL ' : '') . $unions[$i]['query'];
+        }
+
+        return trim($result);
+    }
+
     /**
      * Creates a SELECT EXISTS() SQL statement.
      * @param string $rawSql the subquery in a raw form to select from.

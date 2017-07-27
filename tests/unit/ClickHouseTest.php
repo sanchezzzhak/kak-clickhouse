@@ -101,6 +101,19 @@ class ClickHouseTest extends \yii\codeception\TestCase
     }
 
 
+    public function testUnionQuery()
+    {
+        $query = TestTableModel::find()
+            ->select(['t' => 'time']);
 
+        $query->union(
+            TestTableModel::find()
+            ->select(['t' => 'user_id']),
+            true
+        );
 
+        $result = "SELECT time AS t FROM test_stat UNION ALL SELECT user_id AS t FROM test_stat";
+        $sql = $query->createCommand($this->getDb())->getRawSql();
+        $this->assertTrue($sql === $result, 'Simple union case');
+    }
 }
