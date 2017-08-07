@@ -312,6 +312,11 @@ create custom console controller
             'storeTable' => 'test_stat',
             'storeDb' => \Yii::$app->clickhouse,
             'batchSize' => 10000,
+            'filterSourceRow' => function($data){
+                // if result false then skip save row
+                $time = strtotime($data['hour_at']);
+                return $time > 0;
+            },
             'mapData' => [
                 // key storeTable column => sourceTable column|call function 
                 'event_date' => function($data){
@@ -372,7 +377,8 @@ Configuration tests IDE PHPStorm
 * 2 - menu -> Run -> Edit Configurations...
 * 3 - press key `alt+insert` select codeception
 * 4 - configuration form, view screen
-<img src="https://lh3.googleusercontent.com/T5q2oGPjtF0a6CntvP8H01esp_Y11J_EaiSR64bXZI0A3EahwdDOgq3_hDlbFvJRN6cvVItA_tcw7kZoRxa7WO6K5SfHml-r-FKFYrSpcnpl5SDRjJSmBXdW-xokCmnDvw_YzOgDeW_kKHl4N8JSse3WHiaFokLQGAPeNInhMIWz1I9FU2BcG5V2MLrswwnrnGaxprZLAs4G5q13dTtWuyoUAayp-DcM2OIUkARgTJcvPV4oj74dV1ulVf1SSS5B21AhXE5Gmx7-MR6JCKIJIoWL1RoCqfuna8h63FJ-Jhd0rq86INqq4rYC5DiaRVK4X_uyMoSLDhCfcowYn1FARkJBLPhwvwTJXrVk6ouCL7_UkcG-UDK4cbIruuY6uktpGVB8pjlwl5IiWOHbCGgk6ONCQx5giuUjCuM008QOgvzYzUAi0nekWwWWE_2urqy3hknjJq-fq36yycRlYD0itzPds0DbVdCffjE1__9KuccKmu4AZDXkjwGC1zlXZfHOg2UhIRKicouIG9nFezNzYdUchaUxKU3pxce5CG_l2SxpidPP7SxGgTwrJXwUWmQ4ZIPzA82Usp6mSl3rvGlfIVkqieRM_IGTQ3rsdhufv54mKWE9RA=w1111-h706-no">
+<img src="https://hsto.org/web/877/998/cea/877998cea16e4e9bac8afd36dba5029c.png">
+
 
 4 create config clickhouse `cd project_dir/public_html` & `touch vendor/kak/clickhouse/tests/_config/clickhouse.php`
 ```php

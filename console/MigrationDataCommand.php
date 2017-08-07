@@ -38,6 +38,8 @@ class MigrationDataCommand extends Object
     public $batchSize = 10000;
     public $format = self::FORMAT_CSV;
 
+    /** @var \Closure($row) if closure return false then skip row save dump */
+    public $filterSourceRow;
 
     /** @var array  'store_column' => 'source_column' */
     public $mapData = [
@@ -161,6 +163,8 @@ class MigrationDataCommand extends Object
         $this->checkTableSchema();
         $countTotal = $this->getTotalRows();
 
+        $useFilterSourceRow = $this->filterSourceRow!==null && $this->filterSourceRow instanceof \Closure;
+
         echo "total count rows source table {$countTotal}\n";
         $partCount = ceil($countTotal/ $this->batchSize);
         echo "part data files count {$partCount}\n";
@@ -177,8 +181,12 @@ class MigrationDataCommand extends Object
             $rows = $this->getRows($offset);
             $lines = '';
             foreach ($rows as $row){
+                if($useFilterSourceRow && !call_user_func($this->filterSourceRow, $row)){
+                    continue;
+                }
                 $lines.= $this->prepareExportData($row) . "\n";
             }
+
             $files[] = $path;
             file_put_contents($path,$lines);
 
