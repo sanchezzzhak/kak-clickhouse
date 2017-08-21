@@ -12,6 +12,7 @@ use yii\base\Object;
 use Yii;
 
 use yii\helpers\FileHelper;
+use yii\helpers\VarDumper;
 
 /**
  * Class MigrationDataCommand
@@ -48,6 +49,23 @@ class MigrationDataCommand extends Object
 
     /** @var  TableSchema */
     private $_schema;
+    private $_files = [];
+
+    /**
+     * @return array
+     */
+    public function getFiles()
+    {
+        return $this->_files;
+    }
+
+    /**
+     * @param array $files
+     */
+    public function setFiles($files)
+    {
+        $this->_files = $files;
+    }
 
     public function init()
     {
@@ -128,6 +146,9 @@ class MigrationDataCommand extends Object
             ->all($this->sourceDb);
     }
 
+    /**
+     * @throws \yii\base\Exception
+     */
     private function checkTableSchema()
     {
         if(!$this->_schema = $this->storeDb->getTableSchema($this->storeTable,true)){
@@ -149,14 +170,31 @@ class MigrationDataCommand extends Object
 
     }
 
+    /**
+     * load last files dump
+     * @return bool
+     */
+    public function loadDump()
+    {
+        $dir = Yii::getAlias('@app/runtime/clickhouse') .  $this->storeTable;
+        if(!file_exists($dir)){
+            echo "dir not exist {$dir}\n";
+            return false;
+        }
+        $this->checkTableSchema();
+        $files = FileHelper::findFiles($dir,['recursive' => false ]);
+        $this->setFiles($files);
+    }
 
-
-
-    public function run($insert = true)
+    /**
+     * save source-table data to files
+     * @return array
+     */
+    public function saveDump()
     {
         $dir = Yii::getAlias('@app/runtime/clickhouse') . "/". $this->storeTable;
         if(!file_exists($dir)){
-            echo "create dir " . $dir . "\n";
+            echo "create dir {$dir}\n";
             FileHelper::createDirectory($dir);
         }
 
@@ -171,7 +209,7 @@ class MigrationDataCommand extends Object
         echo "save files dir: {$dir} \n";
         echo "parts:\n";
 
-        $files = [];
+        $this->_files = [];
         for($i=0; $i < $partCount; $i++) {
             $timer = microtime(true);
             $file = 'part' . $i. '.data';
@@ -186,29 +224,57 @@ class MigrationDataCommand extends Object
                 }
                 $lines.= $this->prepareExportData($row) . "\n";
             }
-
-            $files[] = $path;
-            file_put_contents($path,$lines);
+            $this->_files[] = $path;
+            file_put_contents($path, $lines);
 
             $timer = sprintf('%0.3f', microtime(true) - $timer);
             echo " >>> " . $file . " time {$timer} \n";
         }
 
-        if(count($files) && $insert){
+        return $this->_files;
+    }
+
+    /**
+     * import data clickhouse
+     */
+    public function importDump()
+    {
+        $files = $this->_files;
+        if(count($files)){
             $keys = [];
+
             foreach ($this->mapData as $key => $item){
                 $keys[] = $key;
             }
             echo "insert files \n";
             foreach ($files as $file){
                 $timer = microtime(true);
-                $this->storeDb->createCommand()->batchInsertFiles( $this->storeTable, $keys , [$file], $this->format);
+                $responces = $this->storeDb->createCommand()->batchInsertFiles( $this->storeTable, $keys , [$file], $this->format);
                 $timer = sprintf('%0.3f', microtime(true) - $timer);
-                echo " <<< " . pathinfo($file, PATHINFO_BASENAME) . "  time {$timer}\n";
+                $partName = pathinfo($file, PATHINFO_BASENAME);
+                if(!$responces[0]->getIsOk() ){
+                   echo " !!! " . $partName . " time {$timer} error: " . $responces[0]->getContent();
+                   continue;
+                }
+                echo " <<< " . $partName . " time {$timer}\n";
             }
         }
 
         echo "done\n";
+    }
+
+
+    /**
+     * 1 export data mysql
+     * 2 import data clickhouse
+     * @param bool $insert
+     */
+    public function run($insert = true)
+    {
+       $this->saveDump();
+       if($insert){
+           $this->importDump();
+       }
     }
 
 }
