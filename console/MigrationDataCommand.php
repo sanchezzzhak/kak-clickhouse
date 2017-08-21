@@ -5,7 +5,9 @@
  * Date: 09.05.2017
  * Time: 12:25
  */
+
 namespace kak\clickhouse\console;
+
 use kak\clickhouse\ColumnSchema;
 use kak\clickhouse\TableSchema;
 use yii\base\Object;
@@ -20,7 +22,7 @@ use yii\helpers\VarDumper;
  */
 class MigrationDataCommand extends Object
 {
-    const FORMAT_CSV           = 'CSV';
+    const FORMAT_CSV = 'CSV';
     const FORMAT_JSON_EACH_ROW = 'JSONEachRow';
 
     /** @var string source table name */
@@ -70,7 +72,7 @@ class MigrationDataCommand extends Object
     public function init()
     {
         parent::init();
-        if($this->storeDb === null){
+        if ($this->storeDb === null) {
             $this->storeDb = \Yii::$app->clickhouse;
         }
     }
@@ -82,16 +84,15 @@ class MigrationDataCommand extends Object
     private function prepareExportData($row)
     {
         $out = [];
-        foreach ($this->mapData as $key => $item){
+        foreach ($this->mapData as $key => $item) {
             $val = 0;
-            if($item instanceof \Closure){
+            if ($item instanceof \Closure) {
                 $val = call_user_func($item, $row);
                 $val = $this->castTypeValue($key, $val);
-            }
-            elseif(is_string($item) && isset($row[$item])){
-                $val = $this->castTypeValue($key,$row[$item]);
-            }else if(isset($this->_schema->columns[$key])) {
-                $val = $this->castTypeValue($key,$item);
+            } elseif (is_string($item) && isset($row[$item])) {
+                $val = $this->castTypeValue($key, $row[$item]);
+            } else if (isset($this->_schema->columns[$key])) {
+                $val = $this->castTypeValue($key, $item);
             }
             $out[$key] = $val;
         }
@@ -100,13 +101,13 @@ class MigrationDataCommand extends Object
             return json_encode($out);
         }
 
-        return implode(',',$out);
+        return implode(',', $out);
     }
 
-    private function castTypeValue($key,$val)
+    private function castTypeValue($key, $val)
     {
         $column = isset($this->_schema->columns[$key]) ? $this->_schema->columns[$key] : null;
-        if($column!==null) {
+        if ($column !== null) {
             $val = $this->storeDb->quoteValue($column->phpTypecast($val));
         }
         return $val;
@@ -119,11 +120,11 @@ class MigrationDataCommand extends Object
      */
     private function getTotalRows()
     {
-        if($this->sourceQuery!==null) {
+        if ($this->sourceQuery !== null) {
             $query = clone $this->sourceQuery;
-            return  $query->limit(1)->count('*',$this->sourceDb);
+            return $query->limit(1)->count('*', $this->sourceDb);
         }
-        return (new \yii\db\Query())->from($this->sourceTable)->limit(1)->count('*',$this->sourceDb);
+        return (new \yii\db\Query())->from($this->sourceTable)->limit(1)->count('*', $this->sourceDb);
     }
 
     /**
@@ -133,7 +134,7 @@ class MigrationDataCommand extends Object
      */
     private function getRows($offset)
     {
-        if($this->sourceQuery!==null) {
+        if ($this->sourceQuery !== null) {
             $query = clone $this->sourceQuery;
             return $query->limit($this->batchSize)
                 ->offset($offset)
@@ -151,21 +152,21 @@ class MigrationDataCommand extends Object
      */
     private function checkTableSchema()
     {
-        if(!$this->_schema = $this->storeDb->getTableSchema($this->storeTable,true)){
-            throw new \yii\base\Exception('ClickHouse: table `'.$this->storeTable.'` not found');
+        if (!$this->_schema = $this->storeDb->getTableSchema($this->storeTable, true)) {
+            throw new \yii\base\Exception('ClickHouse: table `' . $this->storeTable . '` not found');
         }
 
         // checks columns in table
         $columns = array_keys($this->mapData);
         $columnsNotFound = [];
-        foreach ($columns as $columnName){
-            if(!isset($this->_schema->columns[$columnName])){
+        foreach ($columns as $columnName) {
+            if (!isset($this->_schema->columns[$columnName])) {
                 $columnsNotFound[] = $columnName;
             }
         }
 
-        if(count($columnsNotFound)  > 0 ) {
-            throw new \yii\base\Exception('ClickHouse: table `'.$this->storeTable.'` columns not found  (' . implode(',',$columnsNotFound) . ')');
+        if (count($columnsNotFound) > 0) {
+            throw new \yii\base\Exception('ClickHouse: table `' . $this->storeTable . '` columns not found  (' . implode(',', $columnsNotFound) . ')');
         }
 
     }
@@ -176,13 +177,13 @@ class MigrationDataCommand extends Object
      */
     public function loadDump()
     {
-        $dir = Yii::getAlias('@app/runtime/clickhouse') .  $this->storeTable;
-        if(!file_exists($dir)){
+        $dir = Yii::getAlias('@app/runtime/clickhouse') . $this->storeTable;
+        if (!file_exists($dir)) {
             echo "dir not exist {$dir}\n";
             return false;
         }
         $this->checkTableSchema();
-        $files = FileHelper::findFiles($dir,['recursive' => false ]);
+        $files = FileHelper::findFiles($dir, ['recursive' => false]);
         $this->setFiles($files);
     }
 
@@ -192,8 +193,8 @@ class MigrationDataCommand extends Object
      */
     public function saveDump()
     {
-        $dir = Yii::getAlias('@app/runtime/clickhouse') . "/". $this->storeTable;
-        if(!file_exists($dir)){
+        $dir = Yii::getAlias('@app/runtime/clickhouse') . "/" . $this->storeTable;
+        if (!file_exists($dir)) {
             echo "create dir {$dir}\n";
             FileHelper::createDirectory($dir);
         }
@@ -201,28 +202,28 @@ class MigrationDataCommand extends Object
         $this->checkTableSchema();
         $countTotal = $this->getTotalRows();
 
-        $useFilterSourceRow = $this->filterSourceRow!==null && $this->filterSourceRow instanceof \Closure;
+        $useFilterSourceRow = $this->filterSourceRow !== null && $this->filterSourceRow instanceof \Closure;
 
         echo "total count rows source table {$countTotal}\n";
-        $partCount = ceil($countTotal/ $this->batchSize);
+        $partCount = ceil($countTotal / $this->batchSize);
         echo "part data files count {$partCount}\n";
         echo "save files dir: {$dir} \n";
         echo "parts:\n";
 
         $this->_files = [];
-        for($i=0; $i < $partCount; $i++) {
+        for ($i = 0; $i < $partCount; $i++) {
             $timer = microtime(true);
-            $file = 'part' . $i. '.data';
+            $file = 'part' . $i . '.data';
             $path = $dir . '/' . $file;
 
             $offset = ($i) * $this->batchSize;
             $rows = $this->getRows($offset);
             $lines = '';
-            foreach ($rows as $row){
-                if($useFilterSourceRow && !call_user_func($this->filterSourceRow, $row)){
+            foreach ($rows as $row) {
+                if ($useFilterSourceRow && !call_user_func($this->filterSourceRow, $row)) {
                     continue;
                 }
-                $lines.= $this->prepareExportData($row) . "\n";
+                $lines .= $this->prepareExportData($row) . "\n";
             }
             $this->_files[] = $path;
             file_put_contents($path, $lines);
@@ -240,21 +241,21 @@ class MigrationDataCommand extends Object
     public function importDump()
     {
         $files = $this->_files;
-        if(count($files)){
+        if (count($files)) {
             $keys = [];
 
-            foreach ($this->mapData as $key => $item){
+            foreach ($this->mapData as $key => $item) {
                 $keys[] = $key;
             }
             echo "insert files \n";
-            foreach ($files as $file){
+            foreach ($files as $file) {
                 $timer = microtime(true);
-                $responces = $this->storeDb->createCommand()->batchInsertFiles( $this->storeTable, $keys , [$file], $this->format);
+                $responces = $this->storeDb->createCommand()->batchInsertFiles($this->storeTable, $keys, [$file], $this->format);
                 $timer = sprintf('%0.3f', microtime(true) - $timer);
                 $partName = pathinfo($file, PATHINFO_BASENAME);
-                if(!$responces[0]->getIsOk() ){
-                   echo " !!! " . $partName . " time {$timer} error: " . $responces[0]->getContent();
-                   continue;
+                if (!$responces[0]->getIsOk()) {
+                    echo " !!! " . $partName . " time {$timer} error: " . $responces[0]->getContent();
+                    continue;
                 }
                 echo " <<< " . $partName . " time {$timer}\n";
             }
@@ -271,10 +272,10 @@ class MigrationDataCommand extends Object
      */
     public function run($insert = true)
     {
-       $this->saveDump();
-       if($insert){
-           $this->importDump();
-       }
+        $this->saveDump();
+        if ($insert) {
+            $this->importDump();
+        }
     }
 
 }
