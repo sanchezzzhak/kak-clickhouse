@@ -74,8 +74,8 @@ class QueryBuilder extends BaseQueryBuilder
             $this->buildPreWhere($query->preWhere, $params),
             $this->buildWhere($query->where, $params),
             $this->buildGroupBy($query->groupBy),
-            $this->buildHaving($query->having, $params),
             $this->buildWithTotals($query->hasWithTotals()),
+            $this->buildHaving($query->having, $params),
         ];
 
         $sql = implode($this->separator, array_filter($clauses));
