@@ -79,7 +79,7 @@ class Schema extends \yii\db\Schema
 
     public function createQueryBuilder()
     {
-        return new QueryBuilder($this->db);
+        return new \kak\clickhouse\QueryBuilder($this->db);
     }
 
     /**

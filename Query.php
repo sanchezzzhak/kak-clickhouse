@@ -34,6 +34,7 @@ class Query extends BaseQuery
      */
     public $sample = null;
     public $preWhere = null;
+    public $limitBy = null;
 
     /**
      * Creates a DB command that can be used to execute this query.
@@ -131,6 +132,14 @@ class Query extends BaseQuery
         return $this;
     }
 
+    /**
+     * @return $this
+     */
+    public function limitBy($n, $columns)
+    {
+        $this->limitBy = [$n , $columns];
+        return $this;
+    }
 
     /**
      * @return $this

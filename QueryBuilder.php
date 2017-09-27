@@ -2,9 +2,8 @@
 namespace kak\clickhouse;
 
 use yii\db\Expression;
-use yii\db\QueryBuilder as BaseQueryBuilder;
 
-class QueryBuilder extends BaseQueryBuilder
+class QueryBuilder extends \yii\db\QueryBuilder
 {
 
     /**
@@ -79,7 +78,19 @@ class QueryBuilder extends BaseQueryBuilder
         ];
 
         $sql = implode($this->separator, array_filter($clauses));
-        $sql = $this->buildOrderByAndLimit($sql, $query->orderBy, $query->limit, $query->offset);
+
+        $orderBy = $this->buildOrderBy($query->orderBy);
+        if ($orderBy !== '') {
+            $sql .= $this->separator . $orderBy;
+        }
+        $limitBy = $this->buildLimitBy($query->limitBy);
+        if($limitBy !==''){
+            $sql .= $this->separator . $limitBy;
+        }
+        $limit = $this->buildLimit($query->limit, $query->offset);
+        if ($limit !== '') {
+            $sql .= $this->separator . $limit;
+        }
 
         if (!empty($query->orderBy)) {
             foreach ($query->orderBy as $expression) {
@@ -144,7 +155,7 @@ class QueryBuilder extends BaseQueryBuilder
     public function createTable($table, $columns, $options = null)
     {
         if ($options === null) {
-            $options = 'ENGINE=Memory';
+            throw new \yii\db\Exception('Need set specific settings for engine table');
         }
         return parent::createTable($table, $columns, $options);
     }
@@ -191,6 +202,18 @@ class QueryBuilder extends BaseQueryBuilder
 
         return ltrim($sql);
     }
+
+
+    public function buildLimitBy($limitBy)
+    {
+        if (empty($limitBy)) {
+            return '';
+        }
+        $n = $limitBy[0];
+        $columns = is_array($limitBy[1]) ? implode(',', $limitBy[1]) : $limitBy[1];
+        return 'LIMIT ' . $n . ' BY ' . $columns;
+    }
+
 
     /**
      * @param array $unions
