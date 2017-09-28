@@ -571,8 +571,8 @@ class Command extends BaseCommand
                     $buffer.= $line;
                     $count++;
                     if($count >= $size ){
-                        $buffer = '';  $count = 0;
                         $responses[$key]['part_' . ( $part++) ] = ($this->makeBatchInsert($url, $buffer)->send());
+                        $buffer = '';  $count = 0;
                     }
                 }
                 if(!empty($buffer)){
