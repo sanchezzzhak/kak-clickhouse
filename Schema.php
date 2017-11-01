@@ -142,8 +142,11 @@ class Schema extends \yii\db\Schema
      */
     protected function loadTableSchema($name)
     {
-        $sql = 'SELECT * FROM system.columns WHERE table=:name FORMAT JSON';
-        $result = $this->db->createCommand($sql, [':name' => $name])->queryAll();
+        $sql = 'SELECT * FROM system.columns WHERE `table`=:name and `database`=:database FORMAT JSON';
+        $result = $this->db->createCommand($sql, [
+            ':name' => $name,
+            ':database' => $this->db->database === null ? 'default' : $this->db->database
+        ])->queryAll();
 
         if ($result && isset($result[0])) {
             $table = new TableSchema();
@@ -172,7 +175,8 @@ class Schema extends \yii\db\Schema
         $column->name = $info['name'];
         $column->dbType = $info['type'];
         $column->type = isset($this->typeMap[$column->dbType]) ? $this->typeMap[$column->dbType] : self::TYPE_STRING;
-
+        
+        
         if (preg_match('/^([\w ]+)(?:\(([^\)]+)\))?$/', $column->dbType, $matches)) {
             $type = $matches[1];
             $column->dbType = $matches[1] . (isset($matches[2]) ? "({$matches[2]})" : '');
@@ -180,6 +184,12 @@ class Schema extends \yii\db\Schema
                 $column->type = $this->typeMap[$type];
             }
         }
+
+        $unsignedTypes = ['UInt8', 'UInt16', 'UInt32', 'UInt64'];
+        if(in_array($column->dbType, $unsignedTypes)) {
+            $column->unsigned = true;
+        }
+        
         $column->phpType = $this->getColumnPhpType($column);
         if (empty($info['default_type'])) {
             $column->defaultValue = $info['default_expression'];
