@@ -41,7 +41,13 @@ class Connection extends \yii\db\Connection
     public $commandClass = 'kak\clickhouse\Command';
     public $schemaClass = 'kak\clickhouse\Schema';
     public $transportClass = 'yii\httpclient\CurlTransport';
-    public $requestClass = 'kak\clickhouse\httpclient\Request';
+
+    /**
+     * @var array
+     */
+    public $requestConfig = [
+        'class' => 'kak\clickhouse\httpclient\Request',
+    ];
 
     public $schemaMap = [
         'clickhouse' => 'kak\clickhouse\Schema'
@@ -107,9 +113,7 @@ class Connection extends \yii\db\Connection
         $this->_transport = new Client([
             'baseUrl'   => $url,
             'transport' => $this->transportClass,
-            'requestConfig' => [
-                'class' => $this->requestClass,
-            ]
+            'requestConfig' => $this->requestConfig,
         ]);
     }
 
