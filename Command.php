@@ -423,6 +423,37 @@ class Command extends BaseCommand
     }
 
     /**
+     * Generation sql `create table` for meta (only select query)
+     *
+     * ```php
+     * $sql = 'SELECT sum(click) as sum_click, event_date FROM table_name GROUP BY event_date LIMIT 10';
+     * $command = $connection->createCommand($sql);
+     * $data = $command->queryAll();
+     * $schemaSql = $command->getSchemaQuery();
+     * ```
+     *
+     * @return string
+     * @throws DbException
+     */
+    public function getSchemaQuery()
+    {
+        $sql = $this->getSql();
+        $meta = $this->getMeta();
+        if (!preg_match('#^SELECT#is', $sql)){
+            throw new DbException('Query was not SELECT type');
+        }
+        $table = "CREATE TABLE x (\n    ";
+        $columns = [];
+        foreach ($meta as $item){
+            $columns[] = '`'. $item['name']. '` ' . $item['type'];
+        }
+        $table.= implode(",\n    ", $columns);
+        $table.="\n)";
+
+        return $table;
+    }
+
+    /**
      * @return mixed
      */
     public function getTotals()
@@ -510,6 +541,9 @@ class Command extends BaseCommand
             $columns = $this->db->getSchema()->getTableSchema($table)->columnNames;
         }
         $sql = 'INSERT INTO ' . $this->db->getSchema()->quoteTableName($table) . ' (' . implode(', ', $columns) . ')' . ' FORMAT ' . $format;
+
+        echo $sql;
+        exit;
 
         Yii::info($sql, $categoryLog);
         Yii::beginProfile($sql, $categoryLog);
