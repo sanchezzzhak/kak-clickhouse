@@ -541,10 +541,7 @@ class Command extends BaseCommand
             $columns = $this->db->getSchema()->getTableSchema($table)->columnNames;
         }
         $sql = 'INSERT INTO ' . $this->db->getSchema()->quoteTableName($table) . ' (' . implode(', ', $columns) . ')' . ' FORMAT ' . $format;
-
-        echo $sql;
-        exit;
-
+        
         Yii::info($sql, $categoryLog);
         Yii::beginProfile($sql, $categoryLog);
 
