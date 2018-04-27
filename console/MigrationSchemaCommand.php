@@ -7,11 +7,11 @@
  */
 namespace kak\clickhouse\console;
 use kak\clickhouse\Schema;
-use yii\base\Object;
+use yii\base\BaseObject;
 use Yii;
 
 
-class MigrationSchemaCommand extends Object
+class MigrationSchemaCommand extends BaseObject
 {
     const RESULT_TYPE_SQL = 1;
     const RESULT_TYPE_MIGRATION = 2;
