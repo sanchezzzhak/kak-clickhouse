@@ -16,7 +16,7 @@
     ],
     "require": {
         "yiisoft/yii2": "*",
-        "yiisoft/yii2-httpclient": "~2.0.3",
+        "yiisoft/yii2-httpclient": "~2.0.3"
     },
     "require-dev": {
         "codeception/base": "^2.5",
