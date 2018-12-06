@@ -1,2 +1,2 @@
 <?php
-include_once "models\TestTableModel.php";
+include_once __DIR__ . "/models/TestTableModel.php";

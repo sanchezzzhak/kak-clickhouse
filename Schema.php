@@ -30,6 +30,25 @@ class Schema extends \yii\db\Schema
         'Enum' => self::TYPE_STRING,
         'Enum8' => self::TYPE_STRING,
         'Enum16' => self::TYPE_STRING,
+
+        'Nullable(UInt8)' => self::TYPE_SMALLINT,
+        'Nullable(UInt16' => self::TYPE_INTEGER,
+        'Nullable(UInt32' => self::TYPE_INTEGER,
+        'Nullable(UInt64' => self::TYPE_BIGINT,
+        'Nullable(Int8)' => self::TYPE_SMALLINT,
+        'Nullable(Int16)' => self::TYPE_INTEGER,
+        'Nullable(Int32)' => self::TYPE_INTEGER,
+        'Nullable(Int64)' => self::TYPE_BIGINT,
+        'Nullable(Float32)' => self::TYPE_FLOAT,
+        'Nullable(Float64)' => self::TYPE_FLOAT,
+        'Nullable(String)' => self::TYPE_STRING,
+        'Nullable(FixedString)' => self::TYPE_CHAR,
+        'Nullable(Date)' => self::TYPE_DATE,
+        'Nullable(DateTime)' => self::TYPE_DATETIME,
+        'Nullable(Enum)' => self::TYPE_STRING,
+        'Nullable(Enum8)' => self::TYPE_STRING,
+        'Nullable(Enum16)' => self::TYPE_STRING,
+
         //'Array' => null,
         //'Tuple' => null,
         //'Nested' => null,
@@ -175,8 +194,8 @@ class Schema extends \yii\db\Schema
         $column->name = $info['name'];
         $column->dbType = $info['type'];
         $column->type = isset($this->typeMap[$column->dbType]) ? $this->typeMap[$column->dbType] : self::TYPE_STRING;
-        
-        
+
+
         if (preg_match('/^([\w ]+)(?:\(([^\)]+)\))?$/', $column->dbType, $matches)) {
             $type = $matches[1];
             $column->dbType = $matches[1] . (isset($matches[2]) ? "({$matches[2]})" : '');
@@ -189,7 +208,7 @@ class Schema extends \yii\db\Schema
         if(in_array($column->dbType, $unsignedTypes)) {
             $column->unsigned = true;
         }
-        
+
         $column->phpType = $this->getColumnPhpType($column);
         if (empty($info['default_type'])) {
             $column->defaultValue = $info['default_expression'];
