@@ -13,19 +13,64 @@ class ClickHouseTest extends \Codeception\Test\Unit
         return Yii::$app->clickhouse;
     }
 
+    private function markTestSkipIsTableNotExist()
+    {
+        $schema =  $this->getDb()->getTableSchema(
+            TestTableModel::tableName()
+        );
+        if($schema !== null){
+            $this->markTestSkipped('Test table `test_stat` not exist');
+        }
+    }
+
     /**
      * @var \UnitTester
      */
     protected $tester;
 
     protected function _before()
-    {
-    }
+    {}
 
     protected function _after()
-    {
+    {}
 
+    public function testTableTestStatExist()
+    {
+        $schema =  $this->getDb()->getTableSchema(
+            TestTableModel::tableName()
+        );
+        $this->assertTrue($schema === null && $schema->name === TestTableModel::tableName(), 'not equals test table' . $schema->name);
     }
+
+    public function testSaveActiveRecord()
+    {
+        $model = new TestTableModel();
+        $model->event_date = date('Y-m-d');
+        $model->time = time();
+        $model->user_id = rand(1,10);
+        $model->active = '1';
+
+        $this->assertTrue( $model->save());
+        $findModel = TestTableModel::findOne([
+            'user_id' => $model->user_id,
+            'time' => $model->time
+        ]);
+
+        $this->assertTrue( $findModel !== null, 'find model not found');
+    }
+
+    public function testBachQuery()
+    {
+        $query = new \kak\clickhouse\Query();
+        $batch = $query->select('*')
+            ->from(TestTableModel::tableName());
+
+        foreach ($query->batch(100) as $rows) {
+//            var_dump($rows);
+//            echo "======\n";
+        }
+    }
+
 
     public function testQuoteValues()
     {

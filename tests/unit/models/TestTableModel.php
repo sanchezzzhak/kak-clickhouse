@@ -6,6 +6,14 @@
  * Time: 16:45
  */
 
+/**
+ * Class TestTableModel
+ * @property string $event_date
+ * @property int $time
+ * @property int $user_id
+ * @property int $active
+ *
+ */
 class TestTableModel extends \kak\clickhouse\ActiveRecord
 {
     public static function tableName()
