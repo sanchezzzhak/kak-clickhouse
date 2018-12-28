@@ -71,6 +71,12 @@ class ClickHouseTest extends \Codeception\Test\Unit
         }
     }
 
+    public function testFindModelAR()
+    {
+        $model = TestTableModel::find()->one();
+        $this->assertTrue($model instanceof \kak\clickhouse\ActiveRecord);
+    }
+
     public function testCountQuery()
     {
         $query = new \kak\clickhouse\Query();
