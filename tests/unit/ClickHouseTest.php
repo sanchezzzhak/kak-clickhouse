@@ -71,6 +71,14 @@ class ClickHouseTest extends \Codeception\Test\Unit
         }
     }
 
+    public function testCountQuery()
+    {
+        $query = new \kak\clickhouse\Query();
+        $cnt = $query->from(TestTableModel::tableName())
+            ->count();
+
+        $this->assertTrue($cnt > 0);
+    }
 
     public function testQuoteValues()
     {
