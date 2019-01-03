@@ -78,7 +78,7 @@ class BatchQueryResult  extends BaseObject implements \Iterator
         $this->batch = null;
         $this->value = null;
         $this->key = null;
-        $this-index = 0;
+        $this->index = 0;
     }
 
     /**
