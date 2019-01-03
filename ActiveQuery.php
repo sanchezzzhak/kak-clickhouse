@@ -71,7 +71,7 @@ class ActiveQuery extends Query implements ActiveQueryInterface
     public function one($db = null)
     {
         $row = parent::one($db);
-        if ($row !== false) {
+        if ($row !== null) {
             $models = $this->populate([$row]);
             return reset($models) ?: null;
         }
