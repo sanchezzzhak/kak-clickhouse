@@ -58,6 +58,8 @@ class BatchQueryResult  extends BaseObject implements \Iterator
      * @var string|int the key for the current iteration
      */
     private $key;
+    
+    private $index = 0;
 
     /**
      * Destructor.
@@ -76,6 +78,7 @@ class BatchQueryResult  extends BaseObject implements \Iterator
         $this->batch = null;
         $this->value = null;
         $this->key = null;
+        $this-index = 0;
     }
 
     /**
@@ -122,7 +125,8 @@ class BatchQueryResult  extends BaseObject implements \Iterator
     {
         $command = $this->query->createCommand($this->db);
 
-        $offset = ($this->key *  $this->batchSize);
+        $offset = ($this->index *  $this->batchSize);
+        $this->index++;
         $limit = $this->batchSize;
         $rawSql = $command->getRawSql();
         $command->setSql("{$rawSql} LIMIT {$offset},{$limit}");
