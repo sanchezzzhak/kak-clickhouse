@@ -9,7 +9,9 @@ namespace kak\clickhouse;
 
 
 use yii\db\ColumnSchema as BaseColumnSchema;
+use yii\db\ExpressionInterface;
 use yii\db\PdoValue;
+use yii\helpers\StringHelper;
 
 class ColumnSchema extends BaseColumnSchema
 {

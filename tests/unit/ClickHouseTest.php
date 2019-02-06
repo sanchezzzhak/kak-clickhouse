@@ -49,6 +49,8 @@ class ClickHouseTest extends \Codeception\Test\Unit
         $model->time = time();
         $model->user_id = rand(1,10);
         $model->active = '1';
+        $model->test_uint64 = '12873305439719614842';
+        $model->test_int64  = '9223372036854775807';
 
         $this->assertTrue( $model->save());
         $findModel = TestTableModel::findOne([

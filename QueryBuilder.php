@@ -2,6 +2,7 @@
 namespace kak\clickhouse;
 
 use yii\db\Expression;
+use yii\db\ExpressionInterface;
 
 class QueryBuilder extends \yii\db\QueryBuilder
 {
@@ -260,4 +261,41 @@ class QueryBuilder extends \yii\db\QueryBuilder
             . ' ADD COLUMN ' . $this->db->quoteColumnName($column) . ' '
             . $this->getColumnType($type);
     }
+
+
+    protected function prepareInsertValues($table, $columns, $params = [])
+    {
+        $schema = $this->db->getSchema();
+        $tableSchema = $schema->getTableSchema($table);
+        $columnSchemas = $tableSchema !== null ? $tableSchema->columns : [];
+        $names = [];
+        $placeholders = [];
+        $values = ' DEFAULT VALUES';
+        if ($columns instanceof Query) {
+            list($names, $values, $params) = $this->prepareInsertSelectSubQuery($columns, $schema, $params);
+        } else {
+            foreach ($columns as $name => $value) {
+                $names[] = $schema->quoteColumnName($name);
+
+                if(isset($columnSchemas[$name]) && $columnSchemas[$name]->type === 'bigint'){
+                    $value = new Expression($value);
+                } else{
+                    $value = isset($columnSchemas[$name]) ? $columnSchemas[$name]->dbTypecast($value) : $value;
+                }
+
+                if ($value instanceof ExpressionInterface) {
+                    $placeholders[] = $this->buildExpression($value, $params);
+                } elseif ($value instanceof \yii\db\Query) {
+                    list($sql, $params) = $this->build($value, $params);
+                    $placeholders[] = "($sql)";
+                } else {
+                    $placeholders[] = $this->bindParam($value, $params);
+                }
+            }
+        }
+
+        return [$names, $placeholders, $values, $params];
+    }
+
+
 }
