@@ -1,11 +1,5 @@
 <?php
 
-/**
- * Created by PhpStorm.
- * User: kak
- * Date: 03.05.2017
- * Time: 17:57
- */
 namespace kak\clickhouse\data;
 use yii\db\Expression;
 
@@ -78,5 +72,12 @@ class SqlDataProvider extends \yii\data\SqlDataProvider
         return $result;
     }
 
+    /**
+     * @return int|null|string
+     */
+    protected function prepareTotalCount()
+    {
+        return null;
+    }
 
 }
