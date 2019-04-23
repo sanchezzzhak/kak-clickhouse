@@ -3,6 +3,7 @@ namespace kak\clickhouse;
 
 use yii\db\Expression;
 use yii\db\ExpressionInterface;
+use yii\helpers\StringHelper;
 
 class QueryBuilder extends \yii\db\QueryBuilder
 {
@@ -295,6 +296,66 @@ class QueryBuilder extends \yii\db\QueryBuilder
         }
 
         return [$names, $placeholders, $values, $params];
+    }
+
+    /**
+     * @param string $table
+     * @param array $columns
+     * @param array|\Generator $rows
+     * @param array $params
+     * @return string
+     * @throws \yii\base\InvalidConfigException
+     */
+    public function batchInsert($table, $columns, $rows, &$params = [])
+    {
+        if (empty($rows)) {
+            return '';
+        }
+
+        $schema = $this->db->getSchema();
+        if (($tableSchema = $schema->getTableSchema($table)) !== null) {
+            $columnSchemas = $tableSchema->columns;
+        } else {
+            $columnSchemas = [];
+        }
+
+        $values = [];
+        foreach ($rows as $row) {
+            $vs = [];
+            foreach ($row as $i => $value) {
+
+                if (isset($columns[$i], $columnSchemas[$columns[$i]])) {
+                    $value = $columnSchemas[$columns[$i]]->dbTypecast($value);
+
+                    if(in_array($columnSchemas[$columns[$i]]->type, ['bigint'])){
+                        $value = new Expression($value);
+                    }
+                }
+
+                if (is_string($value)) {
+                    $value = $schema->quoteValue($value);
+                } elseif ($value === false) {
+                    $value = 0;
+                } elseif ($value === null) {
+                    $value = 'NULL';
+                } elseif ($value instanceof ExpressionInterface) {
+                    $value = $this->buildExpression($value, $params);
+                }
+                $vs[] = $value;
+            }
+            $values[] = '(' . implode(', ', $vs) . ')';
+        }
+        if (empty($values)) {
+            return '';
+        }
+
+        foreach ($columns as $i => $name) {
+            $columns[$i] = $schema->quoteColumnName($name);
+        }
+
+        return 'INSERT INTO ' . $schema->quoteTableName($table)
+            . ' (' . implode(', ', $columns) . ') VALUES ' . implode(', ', $values);
+        
     }
 
 
