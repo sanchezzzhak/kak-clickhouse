@@ -69,7 +69,7 @@ class Connection extends \yii\db\Connection
         $this->open();
         \Yii::trace("Executing ClickHouse: {$sql}", __METHOD__);
 
-        /** @var $command \kak\clickhouse\Command  */
+        /** @var $command \kak\clickhouse\Command */
         $command = new $this->commandClass([
             'db' => $this,
             'sql' => $sql,
@@ -99,23 +99,41 @@ class Connection extends \yii\db\Connection
             return;
         }
 
-        $auth = !empty($this->username) ? $this->username . ':' . $this->password  .'@' : '';
-        $scheme = 'http';
-        $url =  $scheme. '://' . $auth . $this->dsn. ':' . $this->port;
+        $url = $this->buildDsnUrl();
+
+        $this->_transport = new Client([
+            'baseUrl' => $url,
+            'transport' => $this->transportClass,
+            'requestConfig' => $this->requestConfig,
+        ]);
+    }
+
+    private function buildDsnUrl()
+    {
+        if (strpos($this->dsn, '@') !== false) {
+            $url = $this->dsn;
+        } else {
+            $auth = !empty($this->username) ? $this->username . ':' . $this->password . '@' : '';
+            $parsed = parse_url($this->dsn);
+            // get default url scheme
+            $scheme = array_key_exists('scheme', $parsed) ? $parsed['scheme'] : 'http';
+            $dsn = $this->dsn;
+            if (strpos($dsn, '://') !== false) {
+                $dsn = str_replace($scheme . '://', '', $dsn);
+            }
+
+            $url = ($scheme !== '' ? $scheme . '://' : '') . $auth . $dsn . ':' . $this->port;
+
+        }
 
         $params = [];
         if (!empty($this->database)) {
             $params['database'] = $this->database;
         }
-        if (count($params)) {
-            $url.= '?' . http_build_query($params);
-        }
-        $this->_transport = new Client([
-            'baseUrl'   => $url,
-            'transport' => $this->transportClass,
-            'requestConfig' => $this->requestConfig,
-        ]);
+        $url = $this->buildUrl($url, $params);
+        return $url;
     }
+
 
     public function buildUrl($url, $data = [])
     {
@@ -128,17 +146,18 @@ class Connection extends \yii\db\Connection
             $parsed['path'] = '/';
         }
 
-        $auth =  (!empty($parsed['user']) ? $parsed['user'] : '') . (!empty($parsed['pass']) ? ':' . $parsed['pass'] : '');
+        $auth = (!empty($parsed['user']) ? $parsed['user'] : '') . (!empty($parsed['pass']) ? ':' . $parsed['pass'] : '');
         $defaultScheme = 'http';
+        
         return (isset($parsed['scheme']) ? $parsed['scheme'] : $defaultScheme)
-        . '://'
-        . (!empty($auth) ? $auth . '@' : '')
-        . $parsed['host']
-        . (!empty($parsed['port']) ? ':' . $parsed['port'] : '')
-        . $parsed['path']
-        . $parsed['query'];
+            . '://'
+            . (!empty($auth) ? $auth . '@' : '')
+            . $parsed['host']
+            . (!empty($parsed['port']) ? ':' . $parsed['port'] : '')
+            . $parsed['path']
+            . $parsed['query'];
     }
-
+    
 
     /**
      * Quotes a string value for use in a query.
