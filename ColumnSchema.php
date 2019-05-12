@@ -55,13 +55,14 @@ class ColumnSchema extends BaseColumnSchema
         switch ($this->phpType) {
             case 'resource':
             case 'string':
-                if (is_resource($value)) {
+                if (is_resource($value) || is_array($value)) {
                     return $value;
                 }
                 if (is_float($value)) {
                     // ensure type cast always has . as decimal separator in all locales
                     return StringHelper::floatToString($value);
                 }
+
                 return (string) $value;
             case 'integer':
                 return (int) $value;
