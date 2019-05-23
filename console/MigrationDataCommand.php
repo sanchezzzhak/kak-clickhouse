@@ -95,7 +95,7 @@ class MigrationDataCommand extends BaseObject
             } else if (isset($this->_schema->columns[$key])) {
                 $val = $this->castTypeValue($key, $item);
             }
-            $out[$key] = $val;
+            $out[$key] = str_replace("'", '', $val);
         }
 
         if ($this->format == self::FORMAT_JSON_EACH_ROW) {
