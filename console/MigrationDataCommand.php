@@ -40,7 +40,7 @@ class MigrationDataCommand extends BaseObject
     public $storeDb;
     /** @var int size data and step export data */
     public $batchSize = 10000;
-    public $format = self::FORMAT_CSV;
+    public $format = self::FORMAT_JSON_EACH_ROW;
 
     /** @var \Closure($row) if closure return false then skip row save dump */
     public $filterSourceRow;
@@ -95,21 +95,38 @@ class MigrationDataCommand extends BaseObject
             } else if (isset($this->_schema->columns[$key])) {
                 $val = $this->castTypeValue($key, $item);
             }
+            
             $out[$key] = $val;
         }
+
+
 
         if ($this->format == self::FORMAT_JSON_EACH_ROW) {
             return json_encode($out);
         }
 
-        return implode(',', $out);
+        return $this->prepateDataToCsvString([$out]);
     }
+
+
+    private function prepateDataToCsvString(array $data)
+    {
+        $handle = fopen('php://memory', 'r+b');
+        foreach ($data as $row) {
+            fputcsv($handle, $row);
+        }
+        rewind($handle);
+        $string = rtrim(stream_get_contents($handle), PHP_EOL);
+        fclose($handle);
+        return $string;
+    }
+
 
     private function castTypeValue($key, $val)
     {
         $column = isset($this->_schema->columns[$key]) ? $this->_schema->columns[$key] : null;
         if ($column !== null) {
-            $val = $this->storeDb->quoteValue($column->phpTypecast($val));
+            $val = $column->phpTypecast($val);
         }
         return $val;
     }
