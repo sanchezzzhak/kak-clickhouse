@@ -58,6 +58,30 @@ class Connection extends \yii\db\Connection
     private $_transport = false;
 
     private $_schema;
+    /**
+     * @var array 
+     */
+    private $_options = [];
+
+    /**
+     * @return array
+     */
+    public function getOptions()
+    {
+        return $this->_options;
+    }
+
+    /**
+     * log_queries = 1
+     * @param array $options
+     * @return $this
+     */
+    public function setOptions(array $options = [])
+    {
+        $this->_options = $options;
+    }
+
+
 
     /**
      * @param $sql
@@ -74,7 +98,8 @@ class Connection extends \yii\db\Connection
             'db' => $this,
             'sql' => $sql,
         ]);
-
+        $command->setOptions($this->getOptions());
+        
         return $command->bindValues($params);
     }
 
