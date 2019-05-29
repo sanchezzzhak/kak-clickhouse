@@ -98,7 +98,7 @@ class Connection extends \yii\db\Connection
             'db' => $this,
             'sql' => $sql,
         ]);
-        $command->setOptions($this->getOptions());
+        $command->addOptions($this->getOptions());
         
         return $command->bindValues($params);
     }
