@@ -76,4 +76,12 @@ class ColumnSchema extends BaseColumnSchema
 
         return $value;
     }
+
+    /**
+     * @return int[] array of numbers that represent possible PDO parameter types
+     */
+    private function getPdoParamTypes()
+    {
+        return [\PDO::PARAM_BOOL, \PDO::PARAM_INT, \PDO::PARAM_STR, \PDO::PARAM_LOB, \PDO::PARAM_NULL, \PDO::PARAM_STMT];
+    }
 }
