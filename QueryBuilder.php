@@ -48,7 +48,16 @@ class QueryBuilder extends \yii\db\QueryBuilder
         }
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function delete($table, $condition, &$params)
+    {
+        $sql = 'ALTER TABLE ' . $this->db->quoteTableName($table). ' DELETE';
+        $where = $this->buildWhere($condition, $params);
 
+        return $where === '' ? $sql : $sql . ' ' . $where;
+    }
 
     /**
      * Generates a SELECT SQL statement from a [[Query]] object.
