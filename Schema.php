@@ -161,10 +161,18 @@ class Schema extends \yii\db\Schema
      */
     protected function loadTableSchema($name)
     {
+        $database = $this->db->database === null ? 'default' : $this->db->database;
+
+        if (stripos($name,'.')) {
+            $schemaData = explode('.',$name);
+            $database = $schemaData[0];
+            $name = $schemaData[1];
+        }
+
         $sql = 'SELECT * FROM system.columns WHERE `table`=:name and `database`=:database FORMAT JSON';
         $result = $this->db->createCommand($sql, [
             ':name' => $name,
-            ':database' => $this->db->database === null ? 'default' : $this->db->database
+            ':database' => $database,
         ])->queryAll();
 
         if ($result && isset($result[0])) {
