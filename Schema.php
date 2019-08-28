@@ -163,8 +163,8 @@ class Schema extends \yii\db\Schema
     {
         $database = $this->db->database === null ? 'default' : $this->db->database;
 
-        if (stripos($name,'.')) {
-            $schemaData = explode('.',$name);
+        if (stripos($name, '.') !== false) {
+            $schemaData = explode('.', $name);
             $database = $schemaData[0];
             $name = $schemaData[1];
         }
