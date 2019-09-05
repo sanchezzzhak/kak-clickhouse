@@ -32,9 +32,9 @@ class Schema extends \yii\db\Schema
         'Enum16' => self::TYPE_STRING,
 
         'Nullable(UInt8)' => self::TYPE_SMALLINT,
-        'Nullable(UInt16' => self::TYPE_INTEGER,
-        'Nullable(UInt32' => self::TYPE_INTEGER,
-        'Nullable(UInt64' => self::TYPE_BIGINT,
+        'Nullable(UInt16)' => self::TYPE_INTEGER,
+        'Nullable(UInt32)' => self::TYPE_INTEGER,
+        'Nullable(UInt64)' => self::TYPE_BIGINT,
         'Nullable(Int8)' => self::TYPE_SMALLINT,
         'Nullable(Int16)' => self::TYPE_INTEGER,
         'Nullable(Int32)' => self::TYPE_INTEGER,
