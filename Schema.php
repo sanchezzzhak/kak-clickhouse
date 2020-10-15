@@ -30,6 +30,9 @@ class Schema extends \yii\db\Schema
         'Enum' => self::TYPE_STRING,
         'Enum8' => self::TYPE_STRING,
         'Enum16' => self::TYPE_STRING,
+        'IPv4' => self::TYPE_STRING,
+        'IPv6' => self::TYPE_STRING,
+        'UUID' => self::TYPE_STRING,
 
         'Nullable(UInt8)' => self::TYPE_SMALLINT,
         'Nullable(UInt16)' => self::TYPE_INTEGER,

@@ -2,6 +2,7 @@
 
 use kak\clickhouse\ActiveRecord;
 use kak\clickhouse\Query;
+use yii\db\Expression;
 
 
 class ClickHouseTest extends \Codeception\Test\Unit
@@ -16,6 +17,14 @@ class ClickHouseTest extends \Codeception\Test\Unit
         return Yii::$app->clickhouse;
     }
 
+    private function genUuidFromClickHouseQuery() {
+        $query = (new Query())->select([
+            new Expression('generateUUIDv4() uuid')
+        ]);
+        return $query->scalar($this->getDb());
+    }
+
+
     private function markTestSkipIsTableNotExist()
     {
         $schema = $this->getDb()->getTableSchema(
@@ -24,6 +33,7 @@ class ClickHouseTest extends \Codeception\Test\Unit
         if ($schema === null) {
             $this->markTestSkipped('Test table `test_stat` not exist');
         }
+        $this->genUuidFromClickHouseQuery();
     }
 
     /**
@@ -50,32 +60,44 @@ class ClickHouseTest extends \Codeception\Test\Unit
         $this->assertTrue($check, sprintf('not equals test table %s', $schema->name));
     }
 
+
     public function testSaveActiveRecord()
     {
         $model = new TestTableModel();
-        $model->event_date = date('Y-m-d');
-        $model->time = time();
+        $model->event_date =  date('Y-m-d');
+        $model->time =  time();
         $model->user_id = rand(1, 10);
         $model->active = '1';
         $model->test_uint64 = '12873305439719614842';
         $model->test_int64 = '9223372036854775807';
+        $model->test_ipv4 = sprintf('%d.%d.%d.%d',
+            mt_rand(0, 255), mt_rand(0, 255), mt_rand(0, 255), mt_rand(0, 255)
+        );
+        $model->test_ipv6 = '2404:6800:4001:805::1008';
+        $model->test_uuid = $this->genUuidFromClickHouseQuery();
 
         $this->assertTrue($model->save());
 
         $findModel = TestTableModel::findOne([
             'user_id' => $model->user_id,
-            'time' => $model->time
+            'time' => $model->time,
         ]);
 
         $this->assertTrue($findModel !== null, 'model not found');
+
+
+        $this->assertEquals($findModel->event_date, $model->event_date);
+        $this->assertEquals($findModel->time, $model->time);
+        $this->assertEquals($findModel->user_id, $model->user_id);
+        $this->assertEquals($model->test_ipv4, $model->test_ipv4);
+        $this->assertEquals($model->test_ipv6, $model->test_ipv6);
+        $this->assertEquals($model->test_uuid, $model->test_uuid);
     }
 
     public function testBachQuery()
     {
         $query = new Query();
-        $batch = $query->select('*')
-            ->from(TestTableModel::tableName());
-
+        $batch = $query->select('*')->from(TestTableModel::tableName());
         foreach ($query->batch(100) as $rows) {
 
         }
@@ -124,7 +146,6 @@ class ClickHouseTest extends \Codeception\Test\Unit
         $this->assertFalse($standard === $result, sprintf('sql quote %s', $result));
     }
 
-
     public function testSampleSectionQuery()
     {
         $table = TestTableModel::tableName();
@@ -140,10 +161,7 @@ class ClickHouseTest extends \Codeception\Test\Unit
 
         $sql = TestTableModel::find()->sample($sample)->where(['user_id' => 1])->createCommand()->getRawSql();
         $this->assertTrue($sql === $result, 'build query SAMPLE (generation active record builder) check false');
-
-
     }
-
 
     public function testSampleOffsetSectionQuery()
     {
@@ -216,6 +234,14 @@ class ClickHouseTest extends \Codeception\Test\Unit
         $sql = $query->createCommand($this->getDb())->getRawSql();
 
         $this->assertEquals($result, $sql, 'Simple limit by check');
+    }
+    
+    public function testExpressionSelect()
+    {
+        $uiid = $this->genUuidFromClickHouseQuery();
+        $pattern = '~^[0-9A-F]{8}-[0-9A-F]{4}-[4][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$~i';
+        $check = preg_match($pattern, $uiid) !== false && $uiid !== '00000000-0000-0000-0000-000000000000';
+        $this->assertTrue($check, 'select expression not correct result');
     }
 
     public function testTypecast()
