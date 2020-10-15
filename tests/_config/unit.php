@@ -7,5 +7,15 @@ return [
     'bootstrap' => [],
     'components' => [
         'clickhouse' => require ('clickhouse.php'),
+        /**
+          return [
+               'clickhouse' => [
+                    '
+          
+               ]
+           ]
+         */
+        
+        
     ]
 ];
