@@ -6,12 +6,10 @@
 The preferred way to install this extension is through [Composer](http://getcomposer.org/).
 
 Either run
-
-	php composer.phar require kak/clickhouse "dev-master"
+	`php composer.phar require kak/clickhouse "*"`
 
 or add
-
-	"kak/clickhouse": "dev-master"
+	`"kak/clickhouse": "*"`
 
 to the require section of your composer.json
 
