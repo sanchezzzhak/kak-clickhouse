@@ -49,8 +49,9 @@ class Query extends BaseQuery
         }
         list ($sql, $params) = $db->getQueryBuilder()->build($this);
 
-
         $this->_command = $db->createCommand($sql, $params);
+        $this->setCommandCache($this->_command);
+        
         return $this->_command;
     }
 
