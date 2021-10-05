@@ -77,6 +77,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
         $this->prepareFromByModel($query);
 
         $clauses = [
+            $this->buildWithQueries($query->withQueries, $params),
             $this->buildSelect($query->select, $params, $query->distinct, $query->selectOption),
             $this->buildFrom($query->from, $params),
             $this->buildSample($query->sample),
@@ -117,7 +118,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
                 }
             }
         }
-
+        
         $union = $this->buildUnion($query->union, $params);
         if ($union !== '') {
             $sql = "$sql{$this->separator}$union";
@@ -145,6 +146,42 @@ class QueryBuilder extends \yii\db\QueryBuilder
         $where = $this->buildCondition($condition, $params);
         return $where === '' ? '' : 'PREWHERE ' . $where;
     }
+
+    /**
+     * @param array $withs of configurations for each WITH query
+     * @param array $params the binding parameters to be populated
+     * @return string compiled WITH prefix of query including nested queries
+     * @see Query::withQuery()
+     * @since 2.0.35
+     */
+    public function buildWithQueries($withs, &$params)
+    {
+        if (empty($withs)) {
+            return '';
+        }
+
+        $result = [];
+        foreach ($withs as $i => $with) {
+            $query = $with['query'];
+            // is <identifier oe alias> AS <subquery expression>
+            if ($query instanceof Query) {
+                list($with['query'], $params) = $this->build($query, $params);
+                $result[] = $with['alias'] . ' AS (' . $with['query'] . ')';
+                continue;
+            }
+            // is <expression> AS <identifier or alias>
+            if (is_scalar($with['query'])) {
+                $result[] = $with['query'] . ' AS ' . $with['alias'];
+            }
+        }
+        
+        if (count($result)) {
+            return 'WITH ' . implode(', ', $result);
+        }
+
+        return '';
+    }
+
 
     /**
      * @param string|array $condition
