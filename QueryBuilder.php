@@ -168,6 +168,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
             if ($query instanceof Query) {
                 list($with['query'], $params) = $this->build($query, $params);
                 $result[] = $with['alias'] . ' AS (' . $with['query'] . ')';
+                continue;
             }
             // is <expression> AS <identifier or alias>
             if (is_scalar($with['query'])) {
