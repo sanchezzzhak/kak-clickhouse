@@ -36,6 +36,7 @@ class Query extends BaseQuery
     public $preWhere = null;
     public $limitBy = null;
 
+    
     /**
      * Creates a DB command that can be used to execute this query.
      * @param \kak\clickhouse\Connection $db the database connection used to generate the SQL statement.
@@ -54,7 +55,7 @@ class Query extends BaseQuery
         
         return $this->_command;
     }
-
+    
     /**
      * set section query SAMPLE
      * @param $n float|int  set value 0.1 .. 1 percent or int 1 .. 1m value
