@@ -3,7 +3,6 @@ namespace kak\clickhouse;
 
 use yii\db\Expression;
 use yii\db\ExpressionInterface;
-use yii\db\Query;
 use yii\helpers\StringHelper;
 
 class QueryBuilder extends \yii\db\QueryBuilder
