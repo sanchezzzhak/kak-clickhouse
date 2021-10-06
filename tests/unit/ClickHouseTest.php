@@ -1,9 +1,80 @@
 <?php
 
+namespace kak\clickhouse\tests\unit;
 
-class ClickHouseTest extends \Codeception\Test\Unit
+use Codeception\Test\Unit;
+use Exception;
+use kak\clickhouse\ActiveRecord;
+use kak\clickhouse\Query;
+use kak\clickhouse\tests\unit\models\TestTableModel;
+use Yii;
+
+/**
+ * Class ClickHouseTest
+ * @package kak\clickhouse\tests\unit
+ */
+class ClickHouseTest extends Unit
 {
     public $appConfig = '@tests/_config/unit.php';
+
+    /**
+     * @var \UnitTester
+     */
+    protected $tester;
+
+
+
+    protected function _before()
+    {
+        $db = $this->getDb();
+        /*
+        if (strpos($db->database, 'test_clickhouse') === false) {
+            throw new Exception("database need name test_clickhouse");
+        }
+
+        try {
+            $db->createCommand(
+                sprintf('CREATE DATABASE IF NOT EXISTS %s ', $db->database)
+            )->execute();
+        } catch (Exception $exception) {
+            echo "ERROR CREATE DATABASE: " . $exception->getMessage() . PHP_EOL;
+        }*/
+
+        try {
+            $db->createCommand('
+            CREATE TABLE IF NOT EXISTS `test_stat` (
+                `event_date` Date,
+                `time` Int32,
+                `user_id` Int32,
+                `active` Nullable(Int8),
+                `test_uint64` UInt64,
+                `test_int64` Int64
+            ) ENGINE = MergeTree(event_date, (event_date, user_id), 8192);')
+                ->execute();
+
+            $db->createCommand()->insert('test_stat', [
+                'event_date' => date('Y-m-d'),
+                'user_id' => 5
+            ])->execute();
+
+        } catch (Exception $exception) {
+            echo "ERROR CREATE TABLE: " . $exception->getMessage() . PHP_EOL;
+        }
+
+    }
+
+    protected function _after()
+    {
+        $db = $this->getDb();
+        $schema = $this->getDb()->getTableSchema(
+            TestTableModel::tableName()
+        );
+        if ($schema !== null) {
+            $db->createCommand()
+                ->dropTable('test_stat')
+                ->execute();
+        }
+    }
 
     /**
      * @return \kak\clickhouse\Connection
@@ -15,31 +86,24 @@ class ClickHouseTest extends \Codeception\Test\Unit
 
     private function markTestSkipIsTableNotExist()
     {
-        $schema =  $this->getDb()->getTableSchema(
+        $schema = $this->getDb()->getTableSchema(
             TestTableModel::tableName()
         );
-        if($schema !== null){
+        if ($schema !== null) {
             $this->markTestSkipped('Test table `test_stat` not exist');
         }
     }
 
-    /**
-     * @var \UnitTester
-     */
-    protected $tester;
-
-    protected function _before()
-    {}
-
-    protected function _after()
-    {}
-
     public function testTableTestStatExist()
     {
-        $schema =  $this->getDb()->getTableSchema(
+        $schema = $this->getDb()->getTableSchema(
             TestTableModel::tableName()
         );
-        $this->assertTrue($schema === null && $schema->name === TestTableModel::tableName(), 'not equals test table' . $schema->name);
+
+        $this->assertTrue(
+            $schema !== null && $schema->name === TestTableModel::tableName(),
+            'not equals test table' . $schema->name
+        );
     }
 
     public function testSaveActiveRecord()
@@ -47,23 +111,23 @@ class ClickHouseTest extends \Codeception\Test\Unit
         $model = new TestTableModel();
         $model->event_date = date('Y-m-d');
         $model->time = time();
-        $model->user_id = rand(1,10);
+        $model->user_id = rand(1, 10);
         $model->active = '1';
         $model->test_uint64 = '12873305439719614842';
-        $model->test_int64  = '9223372036854775807';
+        $model->test_int64 = '9223372036854775807';
 
-        $this->assertTrue( $model->save());
+        $this->assertTrue($model->save());
         $findModel = TestTableModel::findOne([
             'user_id' => $model->user_id,
             'time' => $model->time
         ]);
 
-        $this->assertTrue( $findModel !== null, 'find model not found');
+        $this->assertTrue($findModel !== null, 'find model not found');
     }
 
     public function testBachQuery()
     {
-        $query = new \kak\clickhouse\Query();
+        $query = new Query();
         $batch = $query->select('*')
             ->from(TestTableModel::tableName());
 
@@ -76,12 +140,12 @@ class ClickHouseTest extends \Codeception\Test\Unit
     public function testFindModelAR()
     {
         $model = TestTableModel::find()->one();
-        $this->assertTrue($model instanceof \kak\clickhouse\ActiveRecord);
+        $this->assertTrue($model instanceof ActiveRecord);
     }
 
     public function testCountQuery()
     {
-        $query = new \kak\clickhouse\Query();
+        $query = new Query();
         $cnt = $query->from(TestTableModel::tableName())
             ->count();
 
@@ -90,24 +154,32 @@ class ClickHouseTest extends \Codeception\Test\Unit
 
     public function testQuoteValues()
     {
-        $result = "'test'";
-        $this->assertTrue($this->getDb()->quoteValue('test') === $result, 'quote string ' . $result);
+        $result = $this->getDb()->quoteValue('test');
+        $this->assertEquals($result, "'test'");
+
+        $result = $this->getDb()->quoteValue("wait's");
+        $this->assertEquals($result, "'wait\'s'");
+
         $result = $this->getDb()->quoteValue(5);
-        $this->assertTrue(5 === $result, 'no quote integer ' . $result);
+        $this->assertEquals($result,5);
+
         $result = $this->getDb()->quoteValue(.4);
-        $this->assertTrue($result === .4, 'no quote float ' . $result);
+        $this->assertEquals($result ,.4);
 
-        $result = "SELECT * FROM test_stat WHERE user_id=1";
-        $sql = TestTableModel::find()->where(['user_id' => '1'])->createCommand()->getRawSql();
-        $this->assertFalse($result === $sql, 'sql quote error' . $sql);
+        $result = TestTableModel::find()
+            ->where(['user_id' => 1])
+            ->createCommand()
+            ->getRawSql();
+
+        $this->assertEquals($result, "SELECT * FROM test_stat WHERE user_id=1", 'sql quote error');
+
     }
-
 
     public function testSampleSectionQuery()
     {
         $table = TestTableModel::tableName();
         $sample = 0.5;
-        $query = (new \kak\clickhouse\Query())->select('*');
+        $query = (new Query())->select('*');
         $query->from($table);
         $query->sample($sample);
         $query->where(['user_id' => 1]);
@@ -119,17 +191,14 @@ class ClickHouseTest extends \Codeception\Test\Unit
         $sql = TestTableModel::find()->sample($sample)->where(['user_id' => 1])->createCommand()->getRawSql();
         $this->assertTrue($sql === $result, 'build query SAMPLE (generation active record builder) check false');
 
-
     }
 
 
     public function testSampleOffsetSectionQuery()
     {
-
         $table = TestTableModel::tableName();
         $result = "SELECT * FROM test_stat  SAMPLE 1/10 OFFSET 2/10 WHERE user_id=1";
-
-        $query = (new \kak\clickhouse\Query())->select('*');
+        $query = (new Query())->select('*');
         $query->from($table);
         $query->sample('1/10 OFFSET 2/10');
         $query->where(['user_id' => 1]);
@@ -142,7 +211,7 @@ class ClickHouseTest extends \Codeception\Test\Unit
     public function testPreWhereSectionQuery()
     {
         $table = TestTableModel::tableName();
-        $query = (new \kak\clickhouse\Query())->select('*');
+        $query = (new Query())->select('*');
         $query->from($table);
         $query->preWhere(['user_id' => 2]);
         $query->orPreWhere('user_id=3');
@@ -159,13 +228,10 @@ class ClickHouseTest extends \Codeception\Test\Unit
 
     }
 
-
     public function testUnionQuery()
     {
         $query = TestTableModel::find()->select(['t' => 'time']);
-
         $query->union(TestTableModel::find()->select(['t' => 'user_id']), true);
-
         $result = "SELECT time AS t FROM test_stat UNION ALL SELECT user_id AS t FROM test_stat";
         $sql = $query->createCommand($this->getDb())->getRawSql();
         $this->assertTrue($sql === $result, 'Simple union case');
@@ -173,7 +239,7 @@ class ClickHouseTest extends \Codeception\Test\Unit
 
     public function testLimitByQuery()
     {
-
+/*
         $result = 'SELECT domainWithoutWWW(URL) AS domain, domainWithoutWWW(REFERRER_URL) AS referrer, device_type, count() cnt FROM hits GROUP BY domain, referrer, device_type ORDER BY cnt DESC LIMIT 5 BY domain, device_type LIMIT 100';
 
         $query = new \kak\clickhouse\Query();
@@ -190,7 +256,7 @@ class ClickHouseTest extends \Codeception\Test\Unit
 
         $sql = $query->createCommand($this->getDb())->getRawSql();
 
-        $this->assertEquals($result, $sql, 'Simple limit by check');
+        $this->assertEquals($result, $sql, 'Simple limit by check');*/
     }
 
     public function testTypecast()
