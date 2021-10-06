@@ -45,6 +45,5 @@ jobs:
           composer install --ignore-platform-reqs
 #          composer require yiisoft/yii2 * --ignore-platform-reqs
       - name: Tests / PHP ${{ matrix.php-version }}
-          run: |
-            vendor/bin/codecept run
-
+        run: |
+          vendor/bin/codecept run
