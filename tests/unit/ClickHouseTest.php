@@ -4,6 +4,7 @@ namespace kak\clickhouse\tests\unit;
 
 use Codeception\Test\Unit;
 use Exception;
+use kak\clickhouse\ActiveRecord;
 use kak\clickhouse\Query;
 use kak\clickhouse\tests\unit\models\TestTableModel;
 use Yii;
@@ -21,10 +22,12 @@ class ClickHouseTest extends Unit
      */
     protected $tester;
 
+
+
     protected function _before()
     {
         $db = $this->getDb();
-
+        /*
         if (strpos($db->database, 'test_clickhouse') === false) {
             throw new Exception("database need name test_clickhouse");
         }
@@ -35,7 +38,7 @@ class ClickHouseTest extends Unit
             )->execute();
         } catch (Exception $exception) {
             echo "ERROR CREATE DATABASE: " . $exception->getMessage() . PHP_EOL;
-        }
+        }*/
 
         try {
             $db->createCommand('
@@ -48,11 +51,29 @@ class ClickHouseTest extends Unit
                 `test_int64` Int64
             ) ENGINE = MergeTree(event_date, (event_date, user_id), 8192);')
                 ->execute();
+
+            $db->createCommand()->insert('test_stat', [
+                'event_date' => date('Y-m-d'),
+                'user_id' => 5
+            ])->execute();
+
         } catch (Exception $exception) {
             echo "ERROR CREATE TABLE: " . $exception->getMessage() . PHP_EOL;
         }
 
+    }
 
+    protected function _after()
+    {
+        $db = $this->getDb();
+        $schema = $this->getDb()->getTableSchema(
+            TestTableModel::tableName()
+        );
+        if ($schema !== null) {
+            $db->createCommand()
+                ->dropTable('test_stat')
+                ->execute();
+        }
     }
 
     /**
@@ -119,7 +140,7 @@ class ClickHouseTest extends Unit
     public function testFindModelAR()
     {
         $model = TestTableModel::find()->one();
-        $this->assertTrue($model instanceof \kak\clickhouse\ActiveRecord);
+        $this->assertTrue($model instanceof ActiveRecord);
     }
 
     public function testCountQuery()
