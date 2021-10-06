@@ -16,20 +16,26 @@
     ],
     "require": {
         "yiisoft/yii2": "*",
-        "yiisoft/yii2-httpclient": "~2.0.3"
+        "yiisoft/yii2-httpclient": "^2.0.14"
     },
     "require-dev": {
-        "codeception/base": "^2.5",
-        "guzzlehttp/guzzle": "^6.3"
+        "codeception/codeception": "^4.1.22"
     },
     "autoload": {
         "psr-4": {
             "kak\\clickhouse\\": ""
         }
     },
-    "archive": {
-        "exclude": [
-            "tests/*"
-        ]
-    }
+    "config": {
+        "process-timeout": 1800,
+        "fxp-asset": {
+            "enabled": false
+        }
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://asset-packagist.org"
+        }
+    ]
 }
