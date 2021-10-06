@@ -391,18 +391,14 @@ Summary of recommendations insert data
 - 4 ...
 -->
 
-Configuration tests IDE PHPStorm
+Run tests
 ================================
-* 1 - download codecept & save current project root dir 
-* http://codeception.com/quickstart
-* 2 - menu -> Run -> Edit Configurations...
-* 3 - press key `alt+insert` select codeception
-* 4 - configuration form, view screen
-<img src="https://hsto.org/web/877/998/cea/877998cea16e4e9bac8afd36dba5029c.png">
-
-
-4 create config clickhouse `cd project_dir/public_html` & `touch vendor/kak/clickhouse/tests/_config/clickhouse.php`
+* 1 git clone repository `https://github.com/sanchezzzhak/kak-clickhouse.git`
+* 2 `composer install --ignore-platform-reqs`
+* 3 create the config clickhouse `touch tests/_config/clickhouse.php` if you non-standard access to the server connection
 ```php
+<?php
+
 return [
     'class' => 'kak\clickhouse\Connection',
     'dsn' => '127.0.0.1',
@@ -413,4 +409,6 @@ return [
     'schemaCache' => 'cache',
     'schemaCacheDuration' => 86400
 ];
+
 ```
+* 4 run tests `php vendor/bin/codecept run`
