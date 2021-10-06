@@ -1,4 +1,4 @@
-name: Tests
+name: PHPCodecept
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   build:
-    name: Tests
+    name: PHPCodecept
     runs-on: ${{ matrix.operating-system }}
     strategy:
       matrix:
@@ -32,7 +32,6 @@ jobs:
             operating-system: ubuntu-latest
     steps:
       - uses: EpicStep/clickhouse-github-action@v1.0.0
-      - name: "Install Clickhouse github-action"
       - uses: actions/checkout@v2
       - name: "Install PHP"
         uses: shivammathur/setup-php@v2
@@ -43,8 +42,7 @@ jobs:
       - name: "Composer install"
         run: |
           composer install --ignore-platform-reqs
-#          composer require yiisoft/yii2 * --ignore-platform-reqs
-      - name: Tests / PHP ${{ matrix.php-version }}
+      - name: PHPCodecept / PHP ${{ matrix.php-version }}
         run: |
           php -v
           ./vendor/bin/codecept run
