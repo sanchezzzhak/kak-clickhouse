@@ -57,6 +57,11 @@ class ClickHouseTest extends Unit
                 'user_id' => 5
             ])->execute();
 
+            $db->createCommand()->insert('test_stat', [
+                'event_date' => date('Y-m-d', strtotime('-1 days')),
+                'user_id' => 5
+            ])->execute();
+
         } catch (Exception $exception) {
             echo "ERROR CREATE TABLE: " . $exception->getMessage() . PHP_EOL;
         }
@@ -236,6 +241,65 @@ class ClickHouseTest extends Unit
         $sql = $query->createCommand($this->getDb())->getRawSql();
         $this->assertTrue($sql === $result, 'Simple union case');
     }
+
+    public function testWithRollupQuery()
+    {
+        $command = (new Query())
+            ->select(['count() as cnt', 'event_date'])
+            ->from(TestTableModel::tableName())
+            ->groupBy(['event_date'])
+            ->limit(1)
+            ->withRollup();
+
+        $result = $command->all();
+
+        $this->assertEquals(count($result), 1);
+        $this->assertEquals($command->getCountAll(), 2);
+
+        $sql = $command->createCommand()->getRawSql();
+        $actual = 'SELECT count() AS cnt, event_date FROM test_stat GROUP BY event_date WITH ROLLUP LIMIT 1';
+        $this->assertEquals($sql, $actual);
+    }
+
+    public function testWithCubeQuery()
+    {
+        $command = (new Query())
+            ->select(['count() as cnt', 'event_date'])
+            ->from(TestTableModel::tableName())
+            ->groupBy(['event_date'])
+            ->limit(1)
+            ->withCube();
+
+        $result = $command->all();
+
+        $this->assertEquals(count($result), 1);
+        $this->assertEquals($command->getCountAll(), 2);
+
+        $sql = $command->createCommand()->getRawSql();
+        $actual = 'SELECT count() AS cnt, event_date FROM test_stat GROUP BY event_date WITH CUBE LIMIT 1';
+        $this->assertEquals($sql, $actual);
+    }
+
+
+    public function testWithTotalsQuery()
+    {
+        $command = (new Query())
+            ->select(['count() as cnt', 'event_date'])
+            ->from(TestTableModel::tableName())
+            ->groupBy(['event_date'])
+            ->limit(1)
+            ->withTotals();
+
+        $result = $command->all();
+
+        $this->assertEquals(count($result), 1);
+        $this->assertEquals($command->getCountAll(), 2);
+
+        $sql = $command->createCommand()->getRawSql();
+        $actual = 'SELECT count() AS cnt, event_date FROM test_stat GROUP BY event_date WITH TOTALS LIMIT 1';
+        $this->assertEquals($sql, $actual);
+    }
+
 
     public function testLimitByQuery()
     {

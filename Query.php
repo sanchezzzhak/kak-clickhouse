@@ -10,7 +10,6 @@ namespace kak\clickhouse;
 use yii\db\Query as BaseQuery;
 use yii\db\Exception as DbException;
 
-
 /**
  * Class Query
  * @package kak\clickhouse
@@ -27,16 +26,17 @@ class Query extends BaseQuery
     /** @var \kak\clickhouse\Command|null  */
     private $_command;
     /** @var bool  */
+    /** @depends-annotations this prop will be removed in 1.3.0 */
     private $_withTotals = false;
 
-    /**
-     * @var null
-     */
     public $sample = null;
     public $preWhere = null;
     public $limitBy = null;
+    public $withGroup = null;
 
-    
+    /** @var array */
+    public $withQueries = [];
+
     /**
      * Creates a DB command that can be used to execute this query.
      * @param \kak\clickhouse\Connection $db the database connection used to generate the SQL statement.
@@ -144,16 +144,39 @@ class Query extends BaseQuery
     }
 
     /**
+     * @param bool $active
      * @return $this
      */
-    public function withTotals()
+    public function withTotals($active = true)
     {
-        $this->_withTotals = true;
+        $this->withGroup = $active ? 'TOTALS' : null;
+        return $this;
+    }
+
+    /**
+     * @param bool $active
+     * @return $this
+     */
+    public function withRollup($active = true)
+    {
+        $this->withGroup = $active ? 'ROLLUP' : null;
+        return $this;
+    }
+
+    /**
+     * @param bool $active
+     * @return $this
+     */
+    public function withCube($active = true)
+    {
+        $this->withGroup = $active ? 'CUBE' : null;
         return $this;
     }
 
     /**
      * @return bool
+     * @deprecated
+     * @depends-annotations this method will be removed in 1.3.0
      */
     public function hasWithTotals()
     {

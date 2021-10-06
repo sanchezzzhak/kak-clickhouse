@@ -85,7 +85,9 @@ class QueryBuilder extends \yii\db\QueryBuilder
             $this->buildPreWhere($query->preWhere, $params),
             $this->buildWhere($query->where, $params),
             $this->buildGroupBy($query->groupBy),
-            $this->buildWithTotals($query->hasWithTotals()),
+            $this->buildWithRollup($query->withGroup),
+            $this->buildWithCube($query->withGroup),
+            $this->buildWithTotals($query->withGroup),
             $this->buildHaving($query->having, $params),
         ];
 
@@ -128,12 +130,30 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @param string|array $condition
+     * @param string|null $condition
      * @return string the WITH TOTALS
      */
     public function buildWithTotals($condition)
     {
-        return $condition === true ? ' WITH TOTALS ' : '';
+        return !empty($condition) && $condition === 'TOTALS' ? 'WITH TOTALS' : '';
+    }
+
+    /**
+     * @param string|null $condition
+     * @return string the WITH CUBE
+     */
+    public function buildWithCube($condition)
+    {
+        return !empty($condition) && $condition === 'CUBE' ? 'WITH CUBE' : '';
+    }
+
+    /**
+     * @param string|null $condition
+     * @return string the WITH CUBE
+     */
+    public function buildWithRollup($condition)
+    {
+        return !empty($condition) && $condition === 'ROLLUP' ? 'WITH ROLLUP' : '';
     }
 
     /**
