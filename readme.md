@@ -56,24 +56,31 @@ to the require section of your composer.json
 
 batch insert files
  
-```php    	 	
+```php
+    /** @var \kak\clickhouse\Connection $clickhouse */
+    $clickhouse = \Yii::$app->clickhouse;
+
     $files = [
-        'dump_20170502' => Yii::getAlias('@app/dump_20170502.csv');
-        'dump_20170503' => Yii::getAlias('@app/dump_20170503.csv');
-        'dump_20170504' => Yii::getAlias('@app/dump_20170504.csv');
+        'dump_20170502' => Yii::getAlias('@app/dump_20170502.csv'),
+        'dump_20170503' => Yii::getAlias('@app/dump_20170503.csv'),
+        'dump_20170504' => Yii::getAlias('@app/dump_20170504.csv'),
     ];	
     		
     $responses = $clickhouse->createCommand(null)
     ->batchInsertFiles('stat', null, [
         $files
-    ], 'CSV');	
+    ], 'CSV');
+
     foreach ($responses as $keyId => $response) {
         var_dump($keyId . ' ' . $response->isOk);
     }	
     
 ```
 batch insert files,  batch size = 100 lines
-```php 
+```php
+    /** @var \kak\clickhouse\Connection $clickhouse */
+    $clickhouse = \Yii::$app->clickhouse;
+
     $responses = $clickhouse->createCommand(null)
     ->batchInsertFilesDataSize('stat', null, [
         $files
@@ -103,12 +110,12 @@ old methods: meta, rows, countAll, statistics
     $result = $command->queryAll();
     
     var_dump($command->getMeta());  	      // columns meta info (columnName, dataType)
-    var_dump($command->getMotals());         // result WITH TOTALS
+    var_dump($command->getTotals());          // get totals rows to read
     var_dump($command->getData());  	      // get rows data
     var_dump($command->getRows());  	      // rows count current result
-    var_dump($command->getCountAll());       // rows count before limit at least	
+    var_dump($command->getCountAll());        // rows count before limit at least	
     var_dump($command->getExtremes());  	
-    var_dump($command->getStatistics());     // stat query 
+    var_dump($command->getStatistics());      // stat query 
     
  //or
      
@@ -119,8 +126,9 @@ old methods: meta, rows, countAll, statistics
 ```
 old examples ORM
 ```php
+use kak\clickhouse\Query;
 
-$q = (new \kak\clickhouse\Query())
+$q = (new Query())
     ->from('stat')
     ->withTotals()
     ->where(['event_date' => '2017-05-01' , 'user_id' => 5])
@@ -131,20 +139,19 @@ $command = $q->createCommand();
 $result  = $command->queryAll();
 $total   = $command->getTotals();
 
-var_dump($result);     // result data
-var_dump($total);      // result WITH TOTALS
+var_dump($result);
+var_dump($total); 
 
 // -----
-
-$command = (new \kak\clickhouse\Query())
+$command = (new Query())
     ->select(['event_stat', 'count()'])
     ->from('test_stat')
-    ->groubBy('event_date')
+    ->groupBy('event_date')
     ->limit(1)
     ->withTotals();
     
-$result =  $command->all();        // result data
-var_dump($command->getTotals());      // result WITH TOTALS
+$result =  $command->all();
+var_dump($command->getTotals());
 
 ```
 
@@ -165,6 +172,9 @@ set specific options
 
 [Select with](https://clickhouse.com/docs/en/sql-reference/statements/select/with/)
 ```php
+    use kak\clickhouse\Query;
+    // ...
+
     $db = \Yii::$app->clickhouse;
     $query = new Query();
     // first argument scalar var or Query object
@@ -202,7 +212,9 @@ class Stat extends Model
         $attributes = $this->getAttributes();
         $client->createCommand(null)
             ->insert('stat', $attributes)
-            ->execute();	
+            ->execute();
+
+        return true;	
     }
 }
 ```
@@ -210,9 +222,11 @@ class Stat extends Model
 ## ActiveRecord model
 
 ```php
-class Stat extends \kak\clickhouse\ActiveRecord 
-{
+use kak\clickhouse\ActiveRecord;
+use app\models\User;
 
+class Stat extends ActiveRecord
+{
     // pls overwrite method is config section !=clickhouse
     // default clickhouse
 	public static function getDb()
@@ -227,7 +241,6 @@ class Stat extends \kak\clickhouse\ActiveRecord
     }
     
     // use relation in mysql (Only with, do not use joinWith)
-    
     public function getUser()
     {
     	return $this->hasOne(User::class, ['id' => 'user_id']);
@@ -299,7 +312,7 @@ $provider = new \kak\clickhouse\data\SqlDataProvider([
 
 Using Migration Data
 =====================
-<!--
+
 convert schema mysql >>> clickhouse <br>
 create custom console controller 
 ```php
@@ -320,7 +333,7 @@ create custom console controller
         $sql = $exportSchemaCommand->run();
         echo $sql;
     }    
-``` -->
+```
 migration mysql,mssql data >>> clickhouse <br>
 create custom console controller 
 ```php
