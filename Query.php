@@ -174,6 +174,26 @@ class Query extends BaseQuery
     }
 
     /**
+     * ```php
+     *  $q = new Query();
+     *  $q->select(['count() as cnt']);
+     *  $q->withQuery(10, 'userAlias')
+     *  $q->where('user_id > userAlias')
+     * ```
+     * @docs https://clickhouse.com/docs/en/sql-reference/statements/select/with/
+     *
+     * @param string|Query $query - expression or query
+     * @param string $alias - name expresion
+     * @param bool $recursive - this parameter is unused ClickHouse and ignored
+     * @return $this|Query
+     */
+    public function withQuery($query, $alias, $recursive = false)
+    {
+        $this->withQueries[] = ['query' => $query, 'alias' => $alias, 'recursive' => $recursive];
+        return $this;
+    }
+
+    /**
      * @return bool
      * @deprecated
      * @depends-annotations this method will be removed in 1.3.0
@@ -189,7 +209,7 @@ class Query extends BaseQuery
      */
     private function ensureQueryExecuted()
     {
-        if( null === $this->_command ) {
+        if (null === $this->_command) {
             throw new DbException('Query was not executed yet');
         }
     }
@@ -208,9 +228,9 @@ class Query extends BaseQuery
 
     public function __call($name, $params)
     {
-        $methods = [ 'getmeta', 'getdata', 'getextremes', 'gettotals', 'getcountall', 'getrows'];
-        if (in_array(strtolower( $name), $methods)) {
-            return $this->callSpecialCommand( $name );
+        $methods = ['getmeta', 'getdata', 'getextremes', 'gettotals', 'getcountall', 'getrows'];
+        if (in_array(strtolower($name), $methods)) {
+            return $this->callSpecialCommand($name);
         }
         return parent::__call($name, $params);
     }
