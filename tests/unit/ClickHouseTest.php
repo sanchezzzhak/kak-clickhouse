@@ -57,6 +57,11 @@ class ClickHouseTest extends Unit
                 'user_id' => 5
             ])->execute();
 
+            $db->createCommand()->insert('test_stat', [
+                'event_date' => date('Y-m-d', strtotime('-1 days')),
+                'user_id' => 5
+            ])->execute();
+
         } catch (Exception $exception) {
             echo "ERROR CREATE TABLE: " . $exception->getMessage() . PHP_EOL;
         }
@@ -84,16 +89,6 @@ class ClickHouseTest extends Unit
         return Yii::$app->clickhouse;
     }
 
-    private function markTestSkipIsTableNotExist()
-    {
-        $schema = $this->getDb()->getTableSchema(
-            TestTableModel::tableName()
-        );
-        if ($schema !== null) {
-            $this->markTestSkipped('Test table `test_stat` not exist');
-        }
-    }
-
     public function testTableTestStatExist()
     {
         $schema = $this->getDb()->getTableSchema(
@@ -111,12 +106,13 @@ class ClickHouseTest extends Unit
         $model = new TestTableModel();
         $model->event_date = date('Y-m-d');
         $model->time = time();
-        $model->user_id = rand(1, 10);
+        $model->user_id = mt_rand(1, 10);
         $model->active = '1';
         $model->test_uint64 = '12873305439719614842';
         $model->test_int64 = '9223372036854775807';
 
         $this->assertTrue($model->save());
+
         $findModel = TestTableModel::findOne([
             'user_id' => $model->user_id,
             'time' => $model->time
@@ -236,6 +232,82 @@ class ClickHouseTest extends Unit
         $sql = $query->createCommand($this->getDb())->getRawSql();
         $this->assertTrue($sql === $result, 'Simple union case');
     }
+
+    public function testWithRollupQuery()
+    {
+        $command = (new Query())
+            ->select(['count() as cnt', 'event_date'])
+            ->from(TestTableModel::tableName())
+            ->groupBy(['event_date'])
+            ->limit(1)
+            ->withRollup();
+
+        $result = $command->all();
+
+        $this->assertEquals(count($result), 1);
+        $this->assertEquals($command->getCountAll(), 2);
+
+        $sql = $command->createCommand()->getRawSql();
+        $actual = 'SELECT count() AS cnt, event_date FROM test_stat GROUP BY event_date WITH ROLLUP LIMIT 1';
+        $this->assertEquals($sql, $actual);
+    }
+
+    public function testWithQuery()
+    {
+        $db = $this->getDb();
+
+        $command = (new Query())
+            ->withQuery($db->quoteValue(date('Y-m-d')), 'a1')
+            ->select(['count() as cnt', 'event_date'])
+            ->from(TestTableModel::tableName())
+            ->where('event_date = a1')
+            ->groupBy(['event_date'])
+            ->limit(1);
+
+        $sql = $command->createCommand()->getRawSql();
+        $actual = "WITH '2021-10-07' AS a1 SELECT count() AS cnt, event_date FROM test_stat WHERE event_date = a1 GROUP BY event_date LIMIT 1";
+        $this->assertEquals($sql, $actual);
+    }
+
+    public function testWithCubeQuery()
+    {
+        $command = (new Query())
+            ->select(['count() as cnt', 'event_date'])
+            ->from(TestTableModel::tableName())
+            ->groupBy(['event_date'])
+            ->limit(1)
+            ->withCube();
+
+        $result = $command->all();
+
+        $this->assertEquals(count($result), 1);
+        $this->assertEquals($command->getCountAll(), 2);
+
+        $sql = $command->createCommand()->getRawSql();
+        $actual = 'SELECT count() AS cnt, event_date FROM test_stat GROUP BY event_date WITH CUBE LIMIT 1';
+        $this->assertEquals($sql, $actual);
+    }
+
+
+    public function testWithTotalsQuery()
+    {
+        $command = (new Query())
+            ->select(['count() as cnt', 'event_date'])
+            ->from(TestTableModel::tableName())
+            ->groupBy(['event_date'])
+            ->limit(1)
+            ->withTotals();
+
+        $result = $command->all();
+
+        $this->assertEquals(count($result), 1);
+        $this->assertEquals($command->getCountAll(), 2);
+
+        $sql = $command->createCommand()->getRawSql();
+        $actual = 'SELECT count() AS cnt, event_date FROM test_stat GROUP BY event_date WITH TOTALS LIMIT 1';
+        $this->assertEquals($sql, $actual);
+    }
+
 
     public function testLimitByQuery()
     {
