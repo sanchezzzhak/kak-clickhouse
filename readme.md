@@ -6,10 +6,13 @@
 The preferred way to install this extension is through [Composer](http://getcomposer.org/).
 
 Either run
-	`php composer.phar require kak/clickhouse "*"`
+* stable `php composer.phar require kak/clickhouse ~1.1`
+* dev `php composer.phar require kak/clickhouse @dev`
 
-or add
-	`"kak/clickhouse": "*"`
+or add to composer.json manual
+* stable 	`"kak/clickhouse": "~1.1`
+* dev 	`"kak/clickhouse": "@dev"`
+	
 
 to the require section of your composer.json
 
@@ -152,10 +155,23 @@ $command = (new Query())
     
 $result =  $command->all();
 var_dump($command->getTotals());
-
 ```
 
-set specific options 
+[Group With Modifiers](https://clickhouse.com/docs/en/sql-reference/statements/select/group-by)
+```php
+
+use kak\clickhouse\Query;
+
+$command = (new Query());
+// ...
+$command->withTotals();
+// or
+$command->withCube();
+// or
+$command->withRollup();
+```
+
+Set specific options 
 ```php
   /** @var \kak\clickhouse\Connection $client */
     $client = \Yii::$app->clickhouse;
