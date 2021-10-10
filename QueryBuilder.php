@@ -77,6 +77,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
         $this->prepareFromByModel($query);
 
         $clauses = [
+            $this->buildWithQueries($query->withQueries, $params),
             $this->buildSelect($query->select, $params, $query->distinct, $query->selectOption),
             $this->buildFrom($query->from, $params),
             $this->buildSample($query->sample),
@@ -84,7 +85,9 @@ class QueryBuilder extends \yii\db\QueryBuilder
             $this->buildPreWhere($query->preWhere, $params),
             $this->buildWhere($query->where, $params),
             $this->buildGroupBy($query->groupBy),
-            $this->buildWithTotals($query->hasWithTotals()),
+            $this->buildWithRollup($query->withGroup),
+            $this->buildWithCube($query->withGroup),
+            $this->buildWithTotals($query->withGroup),
             $this->buildHaving($query->having, $params),
         ];
 
@@ -117,7 +120,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
                 }
             }
         }
-
+        
         $union = $this->buildUnion($query->union, $params);
         if ($union !== '') {
             $sql = "$sql{$this->separator}$union";
@@ -127,12 +130,30 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
-     * @param string|array $condition
+     * @param string|null $condition
      * @return string the WITH TOTALS
      */
     public function buildWithTotals($condition)
     {
-        return $condition === true ? ' WITH TOTALS ' : '';
+        return !empty($condition) && $condition === 'TOTALS' ? 'WITH TOTALS' : '';
+    }
+
+    /**
+     * @param string|null $condition
+     * @return string the WITH CUBE
+     */
+    public function buildWithCube($condition)
+    {
+        return !empty($condition) && $condition === 'CUBE' ? 'WITH CUBE' : '';
+    }
+
+    /**
+     * @param string|null $condition
+     * @return string the WITH CUBE
+     */
+    public function buildWithRollup($condition)
+    {
+        return !empty($condition) && $condition === 'ROLLUP' ? 'WITH ROLLUP' : '';
     }
 
     /**
@@ -145,6 +166,42 @@ class QueryBuilder extends \yii\db\QueryBuilder
         $where = $this->buildCondition($condition, $params);
         return $where === '' ? '' : 'PREWHERE ' . $where;
     }
+
+    /**
+     * @param array $withs of configurations for each WITH query
+     * @param array $params the binding parameters to be populated
+     * @return string compiled WITH prefix of query including nested queries
+     * @see Query::withQuery()
+     * @since 2.0.35
+     */
+    public function buildWithQueries($withs, &$params)
+    {
+        if (empty($withs)) {
+            return '';
+        }
+
+        $result = [];
+        foreach ($withs as $i => $with) {
+            $query = $with['query'];
+            // is <identifier oe alias> AS <subquery expression>
+            if ($query instanceof Query) {
+                list($with['query'], $params) = $this->build($query, $params);
+                $result[] = $with['alias'] . ' AS (' . $with['query'] . ')';
+                continue;
+            }
+            // is <expression> AS <identifier or alias>
+            if (is_scalar($with['query'])) {
+                $result[] = $with['query'] . ' AS ' . $with['alias'];
+            }
+        }
+        
+        if (count($result)) {
+            return 'WITH ' . implode(', ', $result);
+        }
+
+        return '';
+    }
+
 
     /**
      * @param string|array $condition

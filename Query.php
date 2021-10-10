@@ -10,7 +10,6 @@ namespace kak\clickhouse;
 use yii\db\Query as BaseQuery;
 use yii\db\Exception as DbException;
 
-
 /**
  * Class Query
  * @package kak\clickhouse
@@ -27,14 +26,16 @@ class Query extends BaseQuery
     /** @var \kak\clickhouse\Command|null  */
     private $_command;
     /** @var bool  */
+    /** @depends-annotations this prop will be removed in 1.3.0 */
     private $_withTotals = false;
 
-    /**
-     * @var null
-     */
     public $sample = null;
     public $preWhere = null;
     public $limitBy = null;
+    public $withGroup = null;
+
+    /** @var array */
+    public $withQueries = [];
 
     /**
      * Creates a DB command that can be used to execute this query.
@@ -49,11 +50,12 @@ class Query extends BaseQuery
         }
         list ($sql, $params) = $db->getQueryBuilder()->build($this);
 
-
         $this->_command = $db->createCommand($sql, $params);
+        $this->setCommandCache($this->_command);
+        
         return $this->_command;
     }
-
+    
     /**
      * set section query SAMPLE
      * @param $n float|int  set value 0.1 .. 1 percent or int 1 .. 1m value
@@ -142,16 +144,59 @@ class Query extends BaseQuery
     }
 
     /**
+     * @param bool $active
      * @return $this
      */
-    public function withTotals()
+    public function withTotals($active = true)
     {
-        $this->_withTotals = true;
+        $this->withGroup = $active ? 'TOTALS' : null;
+        return $this;
+    }
+
+    /**
+     * @param bool $active
+     * @return $this
+     */
+    public function withRollup($active = true)
+    {
+        $this->withGroup = $active ? 'ROLLUP' : null;
+        return $this;
+    }
+
+    /**
+     * @param bool $active
+     * @return $this
+     */
+    public function withCube($active = true)
+    {
+        $this->withGroup = $active ? 'CUBE' : null;
+        return $this;
+    }
+
+    /**
+     * ```php
+     *  $q = new Query();
+     *  $q->select(['count() as cnt']);
+     *  $q->withQuery(10, 'userAlias')
+     *  $q->where('user_id > userAlias')
+     * ```
+     * @docs https://clickhouse.com/docs/en/sql-reference/statements/select/with/
+     *
+     * @param string|Query $query - expression or query
+     * @param string $alias - name expresion
+     * @param bool $recursive - this parameter is unused ClickHouse and ignored
+     * @return $this|Query
+     */
+    public function withQuery($query, $alias, $recursive = false)
+    {
+        $this->withQueries[] = ['query' => $query, 'alias' => $alias, 'recursive' => $recursive];
         return $this;
     }
 
     /**
      * @return bool
+     * @deprecated
+     * @depends-annotations this method will be removed in 1.3.0
      */
     public function hasWithTotals()
     {
@@ -164,7 +209,7 @@ class Query extends BaseQuery
      */
     private function ensureQueryExecuted()
     {
-        if( null === $this->_command ) {
+        if (null === $this->_command) {
             throw new DbException('Query was not executed yet');
         }
     }
@@ -183,9 +228,9 @@ class Query extends BaseQuery
 
     public function __call($name, $params)
     {
-        $methods = [ 'getmeta', 'getdata', 'getextremes', 'gettotals', 'getcountall', 'getrows'];
-        if (in_array(strtolower( $name), $methods)) {
-            return $this->callSpecialCommand( $name );
+        $methods = ['getmeta', 'getdata', 'getextremes', 'gettotals', 'getcountall', 'getrows'];
+        if (in_array(strtolower($name), $methods)) {
+            return $this->callSpecialCommand($name);
         }
         return parent::__call($name, $params);
     }

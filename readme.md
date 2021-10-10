@@ -6,10 +6,13 @@
 The preferred way to install this extension is through [Composer](http://getcomposer.org/).
 
 Either run
-	`php composer.phar require kak/clickhouse "*"`
+* stable `php composer.phar require kak/clickhouse ~1.1`
+* dev `php composer.phar require kak/clickhouse @dev`
 
-or add
-	`"kak/clickhouse": "*"`
+or add to composer.json manual
+* stable 	`"kak/clickhouse": "~1.1`
+* dev 	`"kak/clickhouse": "@dev"`
+	
 
 to the require section of your composer.json
 
@@ -40,7 +43,7 @@ to the require section of your composer.json
    /** @var \kak\clickhouse\Connection $client */
     $client = \Yii::$app->clickhouse;
     $sql = 'select * from stat where counter_id=:counter_id';
-    $client->createCommand($sql,[
+    $client->createCommand($sql, [
         ':counter_id' => 122
     ])->queryAll();
     
@@ -56,37 +59,45 @@ to the require section of your composer.json
 
 batch insert files
  
-```php    	 	
+```php
+    /** @var \kak\clickhouse\Connection $clickhouse */
+    $clickhouse = \Yii::$app->clickhouse;
+
     $files = [
-        'dump_20170502' => Yii::getAlias('@app/dump_20170502.csv');
-        'dump_20170503' => Yii::getAlias('@app/dump_20170503.csv');
-        'dump_20170504' => Yii::getAlias('@app/dump_20170504.csv');
+        'dump_20170502' => Yii::getAlias('@app/dump_20170502.csv'),
+        'dump_20170503' => Yii::getAlias('@app/dump_20170503.csv'),
+        'dump_20170504' => Yii::getAlias('@app/dump_20170504.csv'),
     ];	
     		
     $responses = $clickhouse->createCommand(null)
-    ->batchInsertFiles('stat',null,[
+    ->batchInsertFiles('stat', null, [
         $files
-    ],'CSV');	
-    foreach($responses as $keyId => $response){
+    ], 'CSV');
+
+    foreach ($responses as $keyId => $response) {
         var_dump($keyId . ' ' . $response->isOk);
     }	
     
 ```
 batch insert files,  batch size = 100 lines
-```php 
+```php
+    /** @var \kak\clickhouse\Connection $clickhouse */
+    $clickhouse = \Yii::$app->clickhouse;
+
     $responses = $clickhouse->createCommand(null)
-    ->batchInsertFilesDataSize('stat',null,[
+    ->batchInsertFilesDataSize('stat', null, [
         $files
-    ],'CSV', 100);	
-     foreach($responses as $keyId => $parts){
-        foreach($parts as $partId => $response){
+    ], 'CSV', 100);	
+     foreach ($responses as $keyId => $parts) {
+        foreach ($parts as $partId => $response) {
             var_dump($keyId . '_' . $partId. ' ' . $response->isOk);
         }
      }	
 
 ```
 old methods: meta, rows, countAll, statistics 
-```php     	
+```php
+   	
     $sql = 'SELECT 
         user_id, sum(income) AS sum_income
         FROM stat
@@ -94,33 +105,36 @@ old methods: meta, rows, countAll, statistics
         WITH TOTALS
         LIMIT 10
     '; 	
+
     /** @var \kak\clickhouse\Connection $clickhouse */
     $clickhouse = \Yii::$app->clickhouse;
     
     $command = $clickhouse->createCommand($sql);  	
-    $result  = $command->queryAll();
+    $result = $command->queryAll();
     
     var_dump($command->getMeta());  	      // columns meta info (columnName, dataType)
-    var_dump($command->getMotals());         // result WITH TOTALS
+    var_dump($command->getTotals());          // get totals rows to read
     var_dump($command->getData());  	      // get rows data
     var_dump($command->getRows());  	      // rows count current result
-    var_dump($command->getCountAll());       // rows count before limit at least	
+    var_dump($command->getCountAll());        // rows count before limit at least	
     var_dump($command->getExtremes());  	
-    var_dump($command->getStatistics());     // stat query 
+    var_dump($command->getStatistics());      // stat query 
     
  //or
      
     $command = $clickhouse->createCommand($sql);  
-    $result  = $command->queryAll($command::FETCH_MODE_ALL);
+    $result = $command->queryAll($command::FETCH_MODE_ALL);
     var_dump($result);
     
 ```
 old examples ORM
 ```php
+use kak\clickhouse\Query;
 
-$q = (new \kak\clickhouse\Query())->from('stat')
+$q = (new Query())
+    ->from('stat')
     ->withTotals()
-    ->where(['event_date' => '2017-05-01' , 'user_id' => 5 ])
+    ->where(['event_date' => '2017-05-01' , 'user_id' => 5])
     ->offset(2)
     ->limit(1);
 
@@ -128,27 +142,41 @@ $command = $q->createCommand();
 $result  = $command->queryAll();
 $total   = $command->getTotals();
 
-var_dump($result);     // result data
-var_dump($total);      // result WITH TOTALS
+var_dump($result);
+var_dump($total); 
 
 // -----
-
-$command = (new \kak\clickhouse\Query())
+$command = (new Query())
+    ->select(['event_stat', 'count()'])
     ->from('test_stat')
+    ->groupBy('event_date')
+    ->limit(1)
     ->withTotals();
     
-$result =  $command->all();        // result data
-var_dump($command->getTotals());      // result WITH TOTALS
-
+$result =  $command->all();
+var_dump($command->getTotals());
 ```
 
+[Group With Modifiers](https://clickhouse.com/docs/en/sql-reference/statements/select/group-by)
+```php
 
-set specific options 
+use kak\clickhouse\Query;
+
+$command = (new Query());
+// ...
+$command->withTotals();
+// or
+$command->withCube();
+// or
+$command->withRollup();
+```
+
+Set specific options 
 ```php
   /** @var \kak\clickhouse\Connection $client */
     $client = \Yii::$app->clickhouse;
     $sql = 'select * from stat where counter_id=:counter_id';
-    $client->createCommand($sql,[
+    $client->createCommand($sql, [
         ':counter_id' => 122
     ])->setOptions([
         'max_threads' => 2
@@ -158,10 +186,30 @@ set specific options
 // ->addOptions([])
 ```
 
+[Select with](https://clickhouse.com/docs/en/sql-reference/statements/select/with/)
+```php
+    use kak\clickhouse\Query;
+    // ...
+
+    $db = \Yii::$app->clickhouse;
+    $query = new Query();
+    // first argument scalar var or Query object
+    $query->withQuery($db->quoteValue('2021-10-05'), 'date1');
+    $query->select('*');
+    $query->from('stat');
+    $query->where('event_stat < date1');
+    $query->all();
+/*
+    WITH '2020-07-26' AS date1 SELECT * FROM stat WHERE event_stat < date1
+*/
+
+```
+
 Save custom model 
 ```php
 
 use yii\base\Model;
+
 class Stat extends Model
 {
     public $event_date; // Date;
@@ -173,14 +221,16 @@ class Stat extends Model
         $client = \Yii::$app->clickhouse;
         $this->event_date = date('Y-m-d');
 
-        if($validate && !$this->validate()){
+        if ($validate && !$this->validate()) {
             return false;
         }
 
         $attributes = $this->getAttributes();
         $client->createCommand(null)
-            ->insert('stat', $attributes )
-            ->execute();	
+            ->insert('stat', $attributes)
+            ->execute();
+
+        return true;	
     }
 }
 ```
@@ -188,9 +238,11 @@ class Stat extends Model
 ## ActiveRecord model
 
 ```php
-class Stat extends \kak\clickhouse\ActiveRecord 
-{
+use kak\clickhouse\ActiveRecord;
+use app\models\User;
 
+class Stat extends ActiveRecord
+{
     // pls overwrite method is config section !=clickhouse
     // default clickhouse
 	public static function getDb()
@@ -205,10 +257,9 @@ class Stat extends \kak\clickhouse\ActiveRecord
     }
     
     // use relation in mysql (Only with, do not use joinWith)
-    
     public function getUser()
     {
-    	return $this->hasOne(User::className(),['id' => 'user_id']);
+    	return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 }
 ```
@@ -216,6 +267,7 @@ class Stat extends \kak\clickhouse\ActiveRecord
 Using Gii generator
 ===================
 ```php
+<?php
 return [
     //....
     'modules' => [
@@ -223,10 +275,10 @@ return [
         'gii' => [
             'class' => 'yii\gii\Module',
             'allowedIPs' => [
-                        '127.0.0.1',
-                        '::1',
-                        '192.168.*',
-                        '10.*',
+                '127.0.0.1',
+                '::1',
+                '192.168.*',
+                '10.*',
             ],
             'generators' => [
                 'clickhouseDbModel' => [
@@ -240,7 +292,7 @@ return [
 Using Debug panel
 ===================
 
-```
+```php
 $config['bootstrap'][] = 'debug';
     $config['modules']['debug'] = [
         'class' => 'yii\debug\Module',
@@ -276,7 +328,7 @@ $provider = new \kak\clickhouse\data\SqlDataProvider([
 
 Using Migration Data
 =====================
-<!--
+
 convert schema mysql >>> clickhouse <br>
 create custom console controller 
 ```php
@@ -297,7 +349,7 @@ create custom console controller
         $sql = $exportSchemaCommand->run();
         echo $sql;
     }    
-``` -->
+```
 migration mysql,mssql data >>> clickhouse <br>
 create custom console controller 
 ```php
@@ -364,22 +416,18 @@ Summary of recommendations insert data
 <!--
 @todo сделать в планах
 - 1 добавить приоброзование типов для неочень csv файлов
-- 2 миграции из консольким 
+- 2 миграции из консольки 
 - 4 ...
 -->
 
-Configuration tests IDE PHPStorm
+Run tests
 ================================
-* 1 - download codecept & save current project root dir 
-* http://codeception.com/quickstart
-* 2 - menu -> Run -> Edit Configurations...
-* 3 - press key `alt+insert` select codeception
-* 4 - configuration form, view screen
-<img src="https://hsto.org/web/877/998/cea/877998cea16e4e9bac8afd36dba5029c.png">
-
-
-4 create config clickhouse `cd project_dir/public_html` & `touch vendor/kak/clickhouse/tests/_config/clickhouse.php`
+* 1 git clone repository `https://github.com/sanchezzzhak/kak-clickhouse.git`
+* 2 `composer install --ignore-platform-reqs`
+* 3 create the config clickhouse `touch tests/_config/clickhouse.php` if you non-standard access to the server connection
 ```php
+<?php
+
 return [
     'class' => 'kak\clickhouse\Connection',
     'dsn' => '127.0.0.1',
@@ -390,4 +438,6 @@ return [
     'schemaCache' => 'cache',
     'schemaCacheDuration' => 86400
 ];
+
 ```
+* 4 run tests `php vendor/bin/codecept run`

@@ -1,10 +1,7 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: kak
- * Date: 08.05.2017
- * Time: 16:45
- */
+namespace kak\clickhouse\tests\unit\models;
+
+use kak\clickhouse\ActiveRecord;
 
 /**
  * Class TestTableModel
@@ -12,9 +9,14 @@
  * @property int $time
  * @property int $user_id
  * @property int $active
+ * @property int|string $test_uint64
+ * @property int|string $test_int64
+ * @property string $test_ipv4
+ * @property string $test_ipv6
+ * @property string $test_uuid
  *
  */
-class TestTableModel extends \kak\clickhouse\ActiveRecord
+class TestTableModel extends ActiveRecord
 {
     public static function tableName()
     {

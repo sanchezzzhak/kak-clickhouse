@@ -1,0 +1,48 @@
+name: PHPCodecept
+
+on:
+  pull_request:
+  push:
+    branches: [ master ]
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+  deployments: none
+  issues: read
+  packages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  build:
+    name: PHPCodecept
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      matrix:
+        operating-system: [ubuntu-latest]
+        php-version: ['8.0']
+        include:
+          - php-version: 7.3
+            operating-system: ubuntu-latest
+          - php-version: 7.4
+            operating-system: ubuntu-latest
+    steps:
+      - uses: EpicStep/clickhouse-github-action@v1.0.0
+      - uses: actions/checkout@v2
+      - name: "Install PHP"
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: composer:v2
+          extensions: memcached
+      - name: "Composer install"
+        run: |
+          composer install --ignore-platform-reqs
+      - name: PHPCodecept / PHP ${{ matrix.php-version }}
+        run: |
+          php -v
+          ./vendor/bin/codecept run
