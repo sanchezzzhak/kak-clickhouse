@@ -4,10 +4,15 @@ namespace kak\clickhouse\tests\unit;
 
 use Codeception\Test\Unit;
 use Exception;
-use yii\db\Expression;
-use kak\clickhouse\ActiveRecord;
-use kak\clickhouse\Query;
 use kak\clickhouse\tests\unit\models\TestTableModel;
+
+use kak\clickhouse\{
+    ActiveRecord,
+    Query,
+    Expression
+};
+
+
 use Yii;
 
 /**
@@ -334,29 +339,6 @@ class ClickHouseTest extends Unit
         $sql = $command->createCommand()->getRawSql();
         $actual = 'SELECT count() AS cnt, event_date FROM test_stat GROUP BY event_date WITH TOTALS LIMIT 1';
         $this->assertEquals($sql, $actual);
-    }
-
-
-    public function testLimitByQuery()
-    {
-        /*
-                $result = 'SELECT domainWithoutWWW(URL) AS domain, domainWithoutWWW(REFERRER_URL) AS referrer, device_type, count() cnt FROM hits GROUP BY domain, referrer, device_type ORDER BY cnt DESC LIMIT 5 BY domain, device_type LIMIT 100';
-
-                $query = new \kak\clickhouse\Query();
-                $query->select([
-                    'domainWithoutWWW(URL) AS domain',
-                    'domainWithoutWWW(REFERRER_URL) AS referrer',
-                    'device_type',
-                    'count() cnt'
-                ])
-                    ->from('hits')
-                    ->groupBy('domain, referrer, device_type')
-                    ->orderBy(['cnt' => SORT_DESC])
-                    ->limitBy(5, ['domain, device_type'])->limit(100);
-
-                $sql = $query->createCommand($this->getDb())->getRawSql();
-
-                $this->assertEquals($result, $sql, 'Simple limit by check');*/
     }
 
     public function testQuoteString()
