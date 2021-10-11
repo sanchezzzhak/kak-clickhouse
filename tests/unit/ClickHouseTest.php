@@ -53,6 +53,7 @@ class ClickHouseTest extends Unit
                 `time` Int32,
                 `user_id` Int32,
                 `active` Nullable(Int8),
+                `test_enum` Nullable(Enum8(\'hello\' =1, \'world\' =2)),
                 `test_uint64` UInt64,
                 `test_int64` Int64,
                 `test_ipv4` IPv4,
@@ -68,6 +69,7 @@ class ClickHouseTest extends Unit
 
             $db->createCommand()->insert('test_stat', [
                 'event_date' => date('Y-m-d', strtotime('-1 days')),
+                'time' => time(),
                 'user_id' => 5
             ])->execute();
 
@@ -113,18 +115,12 @@ class ClickHouseTest extends Unit
     public function testSaveActiveRecord()
     {
 
-
-
-        $model = new TestTableModel();
-        $model->event_date =  date('Y-m-d');
-        $model->time =  time();
-        $model->user_id = rand(1, 10);
-
         $model = new TestTableModel();
         $model->event_date = date('Y-m-d');
         $model->time = time();
         $model->user_id = mt_rand(1, 10);
         $model->active = '1';
+        $model->test_enum = 'world';
         $model->test_uint64 = '12873305439719614842';
         $model->test_int64 = '9223372036854775807';
         $model->test_ipv4 = sprintf('%d.%d.%d.%d',
@@ -235,7 +231,6 @@ class ClickHouseTest extends Unit
 
     }
 
-
     public function testPreWhereSectionQuery()
     {
         $table = TestTableModel::tableName();
@@ -321,7 +316,6 @@ class ClickHouseTest extends Unit
         $this->assertEquals($sql, $actual);
     }
 
-
     public function testWithTotalsQuery()
     {
         $command = (new Query())
@@ -369,7 +363,33 @@ class ClickHouseTest extends Unit
         $this->assertFalse($standard === $result, sprintf('sql quote %s', $result));
     }
 
+    public function testExpressionCast()
+    {
+        $ips = [
+            '255.146.176.212' => ip2long('255.146.176.212'),
+            '19.203.21.194' => ip2long('19.203.21.194'),
+        ];
+        foreach ($ips as $ipStr => $ipInt) {
+            $result = (new Query())->select([
+                'alias_name' => Expression::cast($ipInt, 'IPv4')
+            ])->scalar();
 
+            $this->assertEquals($ipStr, $result, sprintf('cast ip "%s" int to str "%s"', $ipInt, $ipStr));
+        }
+
+        $sql = (new Query())->select([
+            'alias_name' => Expression::cast(
+                ip2long('112.246.76.178'),
+                'IPv4'
+            )
+        ])->createCommand()
+            ->getRawSql();
+
+        $this->assertEquals(
+            $sql,
+            "SELECT CAST(1895189682 AS IPv4) AS alias_name"
+        );
+    }
 
     public function testTypecast()
     {

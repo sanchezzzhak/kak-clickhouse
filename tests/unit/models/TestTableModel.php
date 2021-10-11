@@ -14,6 +14,7 @@ use kak\clickhouse\ActiveRecord;
  * @property string $test_ipv4
  * @property string $test_ipv6
  * @property string $test_uuid
+ * @property string $test_enum
  *
  */
 class TestTableModel extends ActiveRecord
