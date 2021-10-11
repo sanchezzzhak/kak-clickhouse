@@ -1,7 +1,6 @@
 <?php
 use kak\clickhouse\Connection as ClickhouseConnection;
 
-
 return [
     'id' => 'test-clickhouse-console',
     'class' => 'yii\console\Application',

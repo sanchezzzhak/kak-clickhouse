@@ -26,10 +26,14 @@ class Schema extends \yii\db\Schema
         'String' => self::TYPE_STRING,
         'FixedString' => self::TYPE_CHAR,
         'Date' => self::TYPE_DATE,
+//        'Date32' => self::TYPE_DATE,
         'DateTime' => self::TYPE_DATETIME,
         'Enum' => self::TYPE_STRING,
         'Enum8' => self::TYPE_STRING,
         'Enum16' => self::TYPE_STRING,
+        'IPv4' => self::TYPE_STRING,
+        'IPv6' => self::TYPE_STRING,
+        'UUID' => self::TYPE_STRING,
 
         'Nullable(UInt8)' => self::TYPE_SMALLINT,
         'Nullable(UInt16)' => self::TYPE_INTEGER,
@@ -98,7 +102,7 @@ class Schema extends \yii\db\Schema
 
     public function createQueryBuilder()
     {
-        return new \kak\clickhouse\QueryBuilder($this->db);
+        return new QueryBuilder($this->db);
     }
 
     /**

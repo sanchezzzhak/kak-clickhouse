@@ -9,6 +9,12 @@ use kak\clickhouse\ActiveRecord;
  * @property int $time
  * @property int $user_id
  * @property int $active
+ * @property int|string $test_uint64
+ * @property int|string $test_int64
+ * @property string $test_ipv4
+ * @property string $test_ipv6
+ * @property string $test_uuid
+ * @property string $test_enum
  *
  */
 class TestTableModel extends ActiveRecord

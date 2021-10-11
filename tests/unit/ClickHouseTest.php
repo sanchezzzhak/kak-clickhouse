@@ -4,9 +4,15 @@ namespace kak\clickhouse\tests\unit;
 
 use Codeception\Test\Unit;
 use Exception;
-use kak\clickhouse\ActiveRecord;
-use kak\clickhouse\Query;
 use kak\clickhouse\tests\unit\models\TestTableModel;
+
+use kak\clickhouse\{
+    ActiveRecord,
+    Query,
+    Expression
+};
+
+
 use Yii;
 
 /**
@@ -47,8 +53,12 @@ class ClickHouseTest extends Unit
                 `time` Int32,
                 `user_id` Int32,
                 `active` Nullable(Int8),
+                `test_enum` Nullable(Enum8(\'hello\' =1, \'world\' =2)),
                 `test_uint64` UInt64,
-                `test_int64` Int64
+                `test_int64` Int64,
+                `test_ipv4` IPv4,
+                `test_ipv6` IPv6,
+                `test_uuid` UUID
             ) ENGINE = MergeTree(event_date, (event_date, user_id), 8192);')
                 ->execute();
 
@@ -59,6 +69,7 @@ class ClickHouseTest extends Unit
 
             $db->createCommand()->insert('test_stat', [
                 'event_date' => date('Y-m-d', strtotime('-1 days')),
+                'time' => time(),
                 'user_id' => 5
             ])->execute();
 
@@ -103,13 +114,23 @@ class ClickHouseTest extends Unit
 
     public function testSaveActiveRecord()
     {
+
         $model = new TestTableModel();
         $model->event_date = date('Y-m-d');
         $model->time = time();
         $model->user_id = mt_rand(1, 10);
         $model->active = '1';
+        $model->test_enum = 'world';
         $model->test_uint64 = '12873305439719614842';
         $model->test_int64 = '9223372036854775807';
+        $model->test_ipv4 = sprintf('%d.%d.%d.%d',
+            mt_rand(0, 255), mt_rand(0, 255), mt_rand(0, 255), mt_rand(0, 255)
+        );
+        $model->test_ipv6 = '2404:6800:4001:805::1008';
+
+        $model->test_uuid = (new Query())->select([
+            new Expression('generateUUIDv4() uuid')
+        ])->scalar($this->getDb());
 
         $this->assertTrue($model->save());
 
@@ -119,6 +140,13 @@ class ClickHouseTest extends Unit
         ]);
 
         $this->assertTrue($findModel !== null, 'find model not found');
+        $this->assertEquals($findModel->event_date, $model->event_date);
+        $this->assertEquals($findModel->time, $model->time);
+        $this->assertEquals($findModel->user_id, $model->user_id);
+
+        $this->assertEquals($findModel->test_ipv4, $model->test_ipv4);
+        $this->assertEquals($findModel->test_ipv6, $model->test_ipv6);
+        $this->assertEquals($findModel->test_uuid, $model->test_uuid);
     }
 
     public function testBachQuery()
@@ -203,7 +231,6 @@ class ClickHouseTest extends Unit
 
     }
 
-
     public function testPreWhereSectionQuery()
     {
         $table = TestTableModel::tableName();
@@ -256,8 +283,9 @@ class ClickHouseTest extends Unit
     {
         $db = $this->getDb();
 
+        $date = date('Y-m-d');
         $command = (new Query())
-            ->withQuery($db->quoteValue(date('Y-m-d')), 'a1')
+            ->withQuery($db->quoteValue($date), 'a1')
             ->select(['count() as cnt', 'event_date'])
             ->from(TestTableModel::tableName())
             ->where('event_date = a1')
@@ -265,7 +293,7 @@ class ClickHouseTest extends Unit
             ->limit(1);
 
         $sql = $command->createCommand()->getRawSql();
-        $actual = "WITH '2021-10-07' AS a1 SELECT count() AS cnt, event_date FROM test_stat WHERE event_date = a1 GROUP BY event_date LIMIT 1";
+        $actual = "WITH '$date' AS a1 SELECT count() AS cnt, event_date FROM test_stat WHERE event_date = a1 GROUP BY event_date LIMIT 1";
         $this->assertEquals($sql, $actual);
     }
 
@@ -288,7 +316,6 @@ class ClickHouseTest extends Unit
         $this->assertEquals($sql, $actual);
     }
 
-
     public function testWithTotalsQuery()
     {
         $command = (new Query())
@@ -308,27 +335,60 @@ class ClickHouseTest extends Unit
         $this->assertEquals($sql, $actual);
     }
 
-
-    public function testLimitByQuery()
+    public function testQuoteString()
     {
-/*
-        $result = 'SELECT domainWithoutWWW(URL) AS domain, domainWithoutWWW(REFERRER_URL) AS referrer, device_type, count() cnt FROM hits GROUP BY domain, referrer, device_type ORDER BY cnt DESC LIMIT 5 BY domain, device_type LIMIT 100';
+        $standard = "'test'";
+        $result = $this->getDb()->quoteValue('test');
+        $this->assertTrue($standard === $result, sprintf('quote string %s', $result));
+    }
 
-        $query = new \kak\clickhouse\Query();
-        $query->select([
-            'domainWithoutWWW(URL) AS domain',
-            'domainWithoutWWW(REFERRER_URL) AS referrer',
-            'device_type',
-            'count() cnt'
-        ])
-            ->from('hits')
-            ->groupBy('domain, referrer, device_type')
-            ->orderBy(['cnt' => SORT_DESC])
-            ->limitBy(5, ['domain, device_type'])->limit(100);
+    public function testQuoteInteger()
+    {
+        $standard = 5;
+        $result = $this->getDb()->quoteValue($standard);
+        $this->assertTrue($standard === $result, sprintf('quote integer %s', $result));
+    }
 
-        $sql = $query->createCommand($this->getDb())->getRawSql();
+    public function testQuoteFloat()
+    {
+        $standard = .4;
+        $result = $this->getDb()->quoteValue($standard);
+        $this->assertTrue($standard === $result, sprintf('quote float %s', $result));
+    }
 
-        $this->assertEquals($result, $sql, 'Simple limit by check');*/
+    public function testQuoteQuoteParams()
+    {
+        $standard = "SELECT * FROM test_stat WHERE user_id=1";
+        $result = TestTableModel::find()->where(['user_id' => '1'])->createCommand()->getRawSql();
+        $this->assertFalse($standard === $result, sprintf('sql quote %s', $result));
+    }
+
+    public function testExpressionCast()
+    {
+        $ips = [
+            '255.146.176.212' => ip2long('255.146.176.212'),
+            '19.203.21.194' => ip2long('19.203.21.194'),
+        ];
+        foreach ($ips as $ipStr => $ipInt) {
+            $result = (new Query())->select([
+                'alias_name' => Expression::cast($ipInt, 'IPv4')
+            ])->scalar();
+
+            $this->assertEquals($ipStr, $result, sprintf('cast ip "%s" int to str "%s"', $ipInt, $ipStr));
+        }
+
+        $sql = (new Query())->select([
+            'alias_name' => Expression::cast(
+                ip2long('112.246.76.178'),
+                'IPv4'
+            )
+        ])->createCommand()
+            ->getRawSql();
+
+        $this->assertEquals(
+            $sql,
+            "SELECT CAST(1895189682 AS IPv4) AS alias_name"
+        );
     }
 
     public function testTypecast()
