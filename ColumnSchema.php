@@ -36,6 +36,11 @@ class ColumnSchema extends BaseColumnSchema
             return null;
         }
 
+        if(preg_match('~Array\(~', $this->dbType) && is_array($value)) {
+//            var_dump($this, $value);
+            return json_encode($value);
+        }
+
         if ($value === null
             || gettype($value) === $this->phpType
             || $value instanceof ExpressionInterface
@@ -75,4 +80,5 @@ class ColumnSchema extends BaseColumnSchema
 
         return $value;
     }
+
 }

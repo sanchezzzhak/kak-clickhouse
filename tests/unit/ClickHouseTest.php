@@ -29,10 +29,10 @@ class ClickHouseTest extends Unit
     protected $tester;
 
 
-
-    protected function _before()
+    public function _before(): void
     {
-        $db = $this->getDb();
+        $db = self::getDb();
+
         /*
         if (strpos($db->database, 'test_clickhouse') === false) {
             throw new Exception("database need name test_clickhouse");
@@ -58,31 +58,41 @@ class ClickHouseTest extends Unit
                 `test_int64` Int64,
                 `test_ipv4` IPv4,
                 `test_ipv6` IPv6,
-                `test_uuid` UUID
+                `test_uuid` UUID,
+                `test_array` Array(Array(Array(Nullable(Int32))))
             ) ENGINE = MergeTree(event_date, (event_date, user_id), 8192);')
                 ->execute();
 
             $db->createCommand()->insert('test_stat', [
                 'event_date' => date('Y-m-d'),
-                'user_id' => 5
+                'user_id' => 5,
+                'test_array' => [
+                    [
+                        [12, 13, 0, 1], [null, 11], [213]
+                    ], [
+                        [1], [12, 32]
+                    ]
+                ]
             ])->execute();
 
             $db->createCommand()->insert('test_stat', [
                 'event_date' => date('Y-m-d', strtotime('-1 days')),
                 'time' => time(),
-                'user_id' => 5
+                'user_id' => 5,
+                'test_array' => [[
+                    [1, 2, 433]
+                ]]
             ])->execute();
 
         } catch (Exception $exception) {
             echo "ERROR CREATE TABLE: " . $exception->getMessage() . PHP_EOL;
         }
-
     }
 
-    protected function _after()
+    public function _after(): void
     {
-        $db = $this->getDb();
-        $schema = $this->getDb()->getTableSchema(
+        $db = self::getDb();
+        $schema = self::getDb()->getTableSchema(
             TestTableModel::tableName()
         );
         if ($schema !== null) {
@@ -95,14 +105,14 @@ class ClickHouseTest extends Unit
     /**
      * @return \kak\clickhouse\Connection
      */
-    protected function getDb()
+    protected static function getDb()
     {
         return Yii::$app->clickhouse;
     }
 
     public function testTableTestStatExist()
     {
-        $schema = $this->getDb()->getTableSchema(
+        $schema = self::getDb()->getTableSchema(
             TestTableModel::tableName()
         );
 
@@ -130,7 +140,7 @@ class ClickHouseTest extends Unit
 
         $model->test_uuid = (new Query())->select([
             new Expression('generateUUIDv4() uuid')
-        ])->scalar($this->getDb());
+        ])->scalar(self::getDb());
 
         $this->assertTrue($model->save());
 
@@ -178,17 +188,17 @@ class ClickHouseTest extends Unit
 
     public function testQuoteValues()
     {
-        $result = $this->getDb()->quoteValue('test');
+        $result = self::getDb()->quoteValue('test');
         $this->assertEquals($result, "'test'");
 
-        $result = $this->getDb()->quoteValue("wait's");
+        $result = self::getDb()->quoteValue("wait's");
         $this->assertEquals($result, "'wait\'s'");
 
-        $result = $this->getDb()->quoteValue(5);
-        $this->assertEquals($result,5);
+        $result = self::getDb()->quoteValue(5);
+        $this->assertEquals($result, 5);
 
-        $result = $this->getDb()->quoteValue(.4);
-        $this->assertEquals($result ,.4);
+        $result = self::getDb()->quoteValue(.4);
+        $this->assertEquals($result, .4);
 
         $result = TestTableModel::find()
             ->where(['user_id' => 1])
@@ -256,7 +266,7 @@ class ClickHouseTest extends Unit
         $query = TestTableModel::find()->select(['t' => 'time']);
         $query->union(TestTableModel::find()->select(['t' => 'user_id']), true);
         $result = "SELECT time AS t FROM test_stat UNION ALL SELECT user_id AS t FROM test_stat";
-        $sql = $query->createCommand($this->getDb())->getRawSql();
+        $sql = $query->createCommand(self::getDb())->getRawSql();
         $this->assertTrue($sql === $result, 'Simple union case');
     }
 
@@ -281,7 +291,7 @@ class ClickHouseTest extends Unit
 
     public function testWithQuery()
     {
-        $db = $this->getDb();
+        $db = self::getDb();
 
         $date = date('Y-m-d');
         $command = (new Query())
@@ -338,21 +348,21 @@ class ClickHouseTest extends Unit
     public function testQuoteString()
     {
         $standard = "'test'";
-        $result = $this->getDb()->quoteValue('test');
+        $result = self::getDb()->quoteValue('test');
         $this->assertTrue($standard === $result, sprintf('quote string %s', $result));
     }
 
     public function testQuoteInteger()
     {
         $standard = 5;
-        $result = $this->getDb()->quoteValue($standard);
+        $result = self::getDb()->quoteValue($standard);
         $this->assertTrue($standard === $result, sprintf('quote integer %s', $result));
     }
 
     public function testQuoteFloat()
     {
         $standard = .4;
-        $result = $this->getDb()->quoteValue($standard);
+        $result = self::getDb()->quoteValue($standard);
         $this->assertTrue($standard === $result, sprintf('quote float %s', $result));
     }
 
@@ -393,16 +403,16 @@ class ClickHouseTest extends Unit
 
     public function testTypecast()
     {
-        $this->assertEquals($this->getDb()->getTableSchema('test_stat')->getColumn('user_id')->type, 'integer');
-        $this->assertEquals($this->getDb()->getTableSchema('test_stat')->getColumn('user_id')->dbTypecast(1), 1);
-        $this->assertEquals($this->getDb()->getTableSchema('test_stat')->getColumn('user_id')->dbTypecast('1'), 1);
-        $this->assertEquals($this->getDb()->getTableSchema('test_stat')->getColumn('user_id')->dbTypecast(null), null);
+        $this->assertEquals(self::getDb()->getTableSchema('test_stat')->getColumn('user_id')->type, 'integer');
+        $this->assertEquals(self::getDb()->getTableSchema('test_stat')->getColumn('user_id')->dbTypecast(1), 1);
+        $this->assertEquals(self::getDb()->getTableSchema('test_stat')->getColumn('user_id')->dbTypecast('1'), 1);
+        $this->assertEquals(self::getDb()->getTableSchema('test_stat')->getColumn('user_id')->dbTypecast(null), null);
 
-        $this->assertEquals($this->getDb()->getTableSchema('test_stat')->getColumn('active')->type, 'smallint');
-        $this->assertEquals($this->getDb()->getTableSchema('test_stat')->getColumn('active')->dbTypecast(1), 1);
-        $this->assertEquals($this->getDb()->getTableSchema('test_stat')->getColumn('active')->dbTypecast('1'), 1);
-        $this->assertEquals($this->getDb()->getTableSchema('test_stat')->getColumn('active')->dbTypecast(null), null);
+        $this->assertEquals(self::getDb()->getTableSchema('test_stat')->getColumn('active')->type, 'smallint');
+        $this->assertEquals(self::getDb()->getTableSchema('test_stat')->getColumn('active')->dbTypecast(1), 1);
+        $this->assertEquals(self::getDb()->getTableSchema('test_stat')->getColumn('active')->dbTypecast('1'), 1);
+        $this->assertEquals(self::getDb()->getTableSchema('test_stat')->getColumn('active')->dbTypecast(null), null);
         // Clickhouse has no TRUE AND FALSE, so TRUE always transform to 1 and FALSE - to 0
-        $this->assertEquals($this->getDb()->getTableSchema('test_stat')->getColumn('active')->dbTypecast(false), 0);
+        $this->assertEquals(self::getDb()->getTableSchema('test_stat')->getColumn('active')->dbTypecast(false), 0);
     }
 }
