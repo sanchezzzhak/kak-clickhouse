@@ -57,7 +57,7 @@ class Schema extends \yii\db\Schema
         'Nullable(Enum8)' => self::TYPE_STRING,
         'Nullable(Enum16)' => self::TYPE_STRING,
 
-        //'Array' => null,
+        'Array' => self::TYPE_ARRAY,
         //'Tuple' => null,
         //'Nested' => null,
     ];
@@ -73,7 +73,6 @@ class Schema extends \yii\db\Schema
      */
     public function insert($table, $columns)
     {
-        $columns = $this->hardTypeCastValue($table, $columns, true);
         $command = $this->db->createCommand()->insert($table, $columns);
         $response = $command->execute();
         if (!$response->isOk) {
@@ -113,13 +112,7 @@ class Schema extends \yii\db\Schema
         }
 
         foreach ($columns as $name => $value) {
-            if ($upstert) {
-                if (preg_match('~Array\(~i', $tableSchema->columns[$name]->dbType)) {
-                    $columns[$name] = new Expression(json_encode($value));
-                    continue;
-                }
-            }
-            $columns[$name] = $tableSchema->columns[$name]->phpTypecast($value);
+            $columns[$name] = $tableSchema->columns[$name]->dbTypecast($value, $upstert);
         }
 
         return $columns;

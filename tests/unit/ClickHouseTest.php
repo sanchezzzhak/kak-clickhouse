@@ -118,9 +118,6 @@ class ClickHouseTest extends Unit
         $this->assertEquals($findModel->test_ipv4, $model->test_ipv4);
         $this->assertEquals($findModel->test_ipv6, $model->test_ipv6);
         $this->assertEquals($findModel->test_uuid, $model->test_uuid);
-
-        var_dump($findModel->test_array, $model->test_array);
-
         $this->assertEquals($findModel->test_array, $model->test_array);
     }
 
@@ -390,7 +387,7 @@ class ClickHouseTest extends Unit
     {
         $table = TestTableModel::tableName();
         $schema = self::getDb()->getTableSchema($table);
-       /* if ($schema !== null) {
+        if ($schema !== null) {
             self::getDb()->createCommand()
                 ->dropTable($table)
                 ->execute();
@@ -398,7 +395,6 @@ class ClickHouseTest extends Unit
             $this->assertNull(self::getDb()->getTableSchema($table));
             return;
         }
-*/
         $this->markTestSkipped('table not found');
     }
 

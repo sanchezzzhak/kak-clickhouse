@@ -14,7 +14,7 @@ use yii\httpclient\Response;
 /**
  * Class Command
  * @package kak\clickhouse
- * @property $db \kak\clickhouse\Connection
+ * @property Connection $db
  */
 class Command extends BaseCommand
 {
@@ -172,7 +172,6 @@ class Command extends BaseCommand
             ->setContent($rawSql)
             ->send();
 
-        var_dump($rawSql);
         $this->checkResponseStatus($response);
 
         if ($prepare) {

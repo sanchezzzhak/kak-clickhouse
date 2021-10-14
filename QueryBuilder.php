@@ -5,6 +5,11 @@ use yii\db\Expression;
 use yii\db\ExpressionInterface;
 use yii\helpers\StringHelper;
 
+/**
+ * Class QueryBuilder
+ * @package kak\clickhouse
+*  @property Connection $db
+ */
 class QueryBuilder extends \yii\db\QueryBuilder
 {
 
@@ -332,15 +337,28 @@ class QueryBuilder extends \yii\db\QueryBuilder
             . $this->getColumnType($type);
     }
 
+    /**
+     * @param string $table
+     * @param array|Query $columns
+     * @param array $params
+     * @return string
+     */
     public function insert($table, $columns, &$params)
     {
         list($names, $placeholders, $values, $params) = $this->prepareInsertValues($table, $columns, $params);
+
         return 'INSERT INTO ' . $this->db->quoteTableName($table)
             . (!empty($names) ? ' (' . implode(', ', $names) . ')' : '')
             . (!empty($placeholders) ? ' VALUES (' . implode(', ', $placeholders) . ')' : $values);
     }
 
-
+    /**
+     * @param string $table
+     * @param array|Query $columns
+     * @param array $params
+     * @return array
+     * @throws \yii\base\InvalidConfigException
+     */
     protected function prepareInsertValues($table, $columns, $params = [])
     {
         $schema = $this->db->getSchema();
@@ -352,21 +370,16 @@ class QueryBuilder extends \yii\db\QueryBuilder
         if ($columns instanceof Query) {
             list($names, $values, $params) = $this->prepareInsertSelectSubQuery($columns, $schema, $params);
         } else {
+
             foreach ($columns as $name => $value) {
                 $names[] = $schema->quoteColumnName($name);
-
-                // array
-                if(preg_match('~Array\(~i', $columnSchemas[$name]->dbType)) {
-                    $value = new Expression(json_encode($value));
-                } else if(isset($columnSchemas[$name]) && $columnSchemas[$name]->type === 'bigint'){
-                    $value = new Expression($value);
-                } else {
-                    $value = isset($columnSchemas[$name]) ? $columnSchemas[$name]->dbTypecast($value) : $value;
-                }
+                /** @var ColumnSchema $columnSchema */
+                $columnSchema = $columnSchemas[$name];
+                $value = $columnSchema->dbTypecast($value, true);
 
                 if ($value instanceof ExpressionInterface) {
                     $placeholders[] = $this->buildExpression($value, $params);
-                } elseif ($value instanceof \yii\db\Query) {
+                } elseif ($value instanceof Query) {
                     list($sql, $params) = $this->build($value, $params);
                     $placeholders[] = "($sql)";
                 } else {
@@ -402,19 +415,8 @@ class QueryBuilder extends \yii\db\QueryBuilder
         $values = [];
         foreach ($rows as $row) {
             $vs = [];
-            foreach ($row as $i => &$value) {
-
-                if (isset($columns[$i], $columnSchemas[$columns[$i]])) {
-                    if(preg_match('~Array\(~i', $columnSchemas[$columns[$i]]->dbType)) {
-                        $value = new Expression(json_encode($value));
-                    } else {
-                        $value = $columnSchemas[$columns[$i]]->dbTypecast($value);
-                        if(in_array($columnSchemas[$columns[$i]]->type, ['bigint'])){
-                            $value = new Expression($value);
-                        }
-                    }
-                }
-
+            foreach ($row as $i => $value) {
+                $value = $columnSchemas[$columns[$i]]->dbTypecast($value, true);
                 if (is_string($value)) {
                     $value = $schema->quoteValue($value);
                 } elseif ($value === false) {
@@ -428,8 +430,6 @@ class QueryBuilder extends \yii\db\QueryBuilder
             }
             $values[] = '(' . implode(', ', $vs) . ')';
         }
-
-        var_dump($values);
 
         if (empty($values)) {
             return '';

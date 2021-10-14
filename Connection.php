@@ -250,7 +250,7 @@ class Connection extends \yii\db\Connection
     }
 
     /**
-     * @return object|\kak\clickhouse\Schema
+     * @return Schema
      * @throws \yii\base\InvalidConfigException
      */
     public function getSchema()
