@@ -9,6 +9,7 @@ use yii\db\Command as BaseCommand;
 use yii\db\Exception as DbException;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Json;
+use yii\httpclient\Response;
 
 /**
  * Class Command
@@ -29,7 +30,7 @@ class Command extends BaseCommand
     /** @var int fetch type result */
     public $fetchMode = 0;
 
-    private $_format = null;
+    private $_format;
 
     private $_pendingParams = [];
 
@@ -61,6 +62,23 @@ class Command extends BaseCommand
      * @var array
      */
     private $_statistics;
+    /**
+     * @var string|null
+     */
+    private $_query_id;
+    /**
+     * @var string|null
+     */
+    private $_timezone;
+    /**
+     * @var string|null
+     */
+    private $_server_name;
+    /**
+     * @var array|null
+     */
+    private $_summary;
+
     /**
      * @var
      */
@@ -94,6 +112,7 @@ class Command extends BaseCommand
     }
 
     /**
+     * all replace settings
      * @param array $options
      * @return $this
      */
@@ -138,7 +157,11 @@ class Command extends BaseCommand
         return $this;
     }
 
-
+    /**
+     * @param bool $prepare
+     * @return array|int|mixed
+     * @throws Exception
+     */
     public function execute($prepare = false)
     {
         $rawSql = $this->getRawSql();
@@ -149,6 +172,7 @@ class Command extends BaseCommand
             ->setContent($rawSql)
             ->send();
 
+        var_dump($rawSql);
         $this->checkResponseStatus($response);
 
         if ($prepare) {
@@ -160,6 +184,7 @@ class Command extends BaseCommand
 
     /**
      * @return array|mixed
+     * @throws Exception
      */
     public function queryColumn()
     {
@@ -218,14 +243,16 @@ class Command extends BaseCommand
     protected function queryInternal($method, $fetchMode = null)
     {
         $rawSql = $this->getRawSql();
-        if ($method == self::FETCH) {
-            if (preg_match('#^SELECT#is', $rawSql) && !preg_match('#LIMIT#is', $rawSql)) {
-                $rawSql .= ' LIMIT 1';
-            }
+
+        // added limit 1 is fetch one
+        if (($method === self::FETCH) && 0 === stripos($rawSql, "SELECT") && !preg_match('#LIMIT#is', $rawSql)) {
+            $rawSql .= ' LIMIT 1';
         }
+        // is format null set format json
         if ($this->getFormat() === null && strpos($rawSql, 'FORMAT ') === false) {
             $rawSql .= ' FORMAT JSON';
         }
+
         \Yii::info($rawSql, 'kak\clickhouse\Command::query');
 
         if ($method !== '') {
@@ -282,6 +309,7 @@ class Command extends BaseCommand
     /**
      * @param $result
      * @return array
+     * @throws DbException
      */
     protected function getStatementData($result)
     {
@@ -293,6 +321,10 @@ class Command extends BaseCommand
             'totals' => $this->getTotals(),
             'statistics' => $this->getStatistics(),
             'extremes' => $this->getExtremes(),
+            'summary' => $this->getSummary(),
+            'serverName' => $this->getServerName(),
+            'timezone' => $this->getTimezone(),
+            'queryId' => $this->getQueryId(),
         ];
     }
 
@@ -307,7 +339,7 @@ class Command extends BaseCommand
 
     /**
      * Raise exception when get 500s error
-     * @param $response \yii\httpclient\Response
+     * @param $response Response
      * @throws Exception
      */
     public function checkResponseStatus($response)
@@ -336,11 +368,11 @@ class Command extends BaseCommand
                 return is_array($result) ? array_shift($result) : $result;
         }
 
-        if ($fetchMode == self::FETCH_MODE_ALL) {
+        if ($fetchMode === self::FETCH_MODE_ALL) {
             return $this->getStatementData($result);
         }
 
-        if ($fetchMode == self::FETCH_MODE_TOTAL) {
+        if ($fetchMode === self::FETCH_MODE_TOTAL) {
             return $this->getTotals();
         }
 
@@ -350,17 +382,16 @@ class Command extends BaseCommand
 
     /**
      * Parse response with data
-     * @param \yii\httpclient\Response $response
+     * @param Response $response
      * @param null|string $method
      * @param bool $prepareResponse
      * @return mixed|array
      */
-    private function parseResponse(\yii\httpclient\Response $response)
+    private function parseResponse(Response $response)
     {
-        $contentType = $response
-            ->getHeaders()
-            ->get('Content-Type');
+        $headers = $response->getHeaders();
 
+        $contentType = $headers->get('Content-Type');
         list($type) = explode(';', $contentType);
 
         $type = strtolower($type);
@@ -368,10 +399,25 @@ class Command extends BaseCommand
             'application/json' => 'parseJson'
         ];
 
-        $result = (isset($hash[$type])) ? $this->{$hash[$type]}($response->content) : $response->content;
-        return $result;
+        $prefix = 'x-clickhouse-';
+        if (($queryId = $headers->get($prefix . 'query-id')) !== null) {
+            $this->_query_id = $queryId;
+        }
+        if (($serverName = $headers->get($prefix .  'server-display-name')) !== null) {
+            $this->_server_name = $serverName;
+        }
+        if (($timezone = $headers->get($prefix . 'timezone')) !== null) {
+            $this->_timezone = $timezone;
+        }
+        if (($summary = $headers->get($prefix . 'summary')) !== null) {
+            $this->_summary = Json::decode($summary);
+        }
+        return (isset($hash[$type])) ? $this->{$hash[$type]}($response->content) : $response->content;
     }
 
+    /**
+     * @param $result
+     */
     private function prepareResponseData($result)
     {
         if (!is_array($result)) {
@@ -384,13 +430,34 @@ class Command extends BaseCommand
                 $this->{$attr} = $result[$key];
             }
         }
+
+        $columns = ArrayHelper::index($this->getMeta(), 'name');
+        foreach ($this->getData() as $key => &$item) {
+            $columnType = $columns[$key]['type'] ?? null;
+            if ($columnType === null) {
+                continue;
+            }
+            // cast string array to array
+            if ($columns[$key] && stripos($columnType, 'Array') !== false) {
+                $item = json_decode($item, true);
+            }
+        }
     }
 
+    /**
+     * parse json content to array
+     * @param string $content
+     * @return mixed|null
+     */
     private function parseJson($content)
     {
         return Json::decode($content);
     }
 
+    /**
+     * checking that the request was executed otherwise an exception
+     * @throws DbException
+     */
     private function ensureQueryExecuted()
     {
         if (true !== $this->_is_result) {
@@ -401,6 +468,7 @@ class Command extends BaseCommand
     /**
      * get meta columns information
      * @return mixed
+     * @throws DbException
      */
     public function getMeta()
     {
@@ -411,6 +479,7 @@ class Command extends BaseCommand
     /**
      * get all data result
      * @return mixed|array
+     * @throws DbException
      */
     public function getData()
     {
@@ -453,7 +522,53 @@ class Command extends BaseCommand
     }
 
     /**
+     * get clickhouse query id
      * @return mixed
+     * @throws DbException
+     */
+    public function getQueryId()
+    {
+        $this->ensureQueryExecuted();
+        return $this->_query_id;
+    }
+
+    /**g
+     * get clickhouse server name
+     * @return string|null
+     * @throws DbException
+     */
+    public function getServerName()
+    {
+        $this->ensureQueryExecuted();
+        return $this->_server_name;
+    }
+
+    /**
+     * get clickhouse summary array
+     * @return array|null
+     * @throws DbException
+     */
+    public function getSummary()
+    {
+        $this->ensureQueryExecuted();
+        return $this->_summary;
+    }
+
+    /**
+     * get clickhouse timezone
+     * @return string|null
+     * @throws DbException
+     */
+    public function getTimezone()
+    {
+        $this->ensureQueryExecuted();
+        return $this->_timezone;
+    }
+
+    /**
+     * get total values​(when using WITH TOTALS).
+     * @return mixed
+     * @throws DbException
      */
     public function getTotals()
     {
@@ -461,9 +576,10 @@ class Command extends BaseCommand
         return $this->_totals;
     }
 
-
     /**
+     * extreme values (with the extremes setting set to 1).
      * @return mixed
+     * @throws DbException
      */
     public function getExtremes()
     {
@@ -472,8 +588,9 @@ class Command extends BaseCommand
     }
 
     /**
-     *  get count result items
+     * get the total number of rows output.
      * @return mixed
+     * @throws DbException
      */
     public function getRows()
     {
@@ -482,8 +599,10 @@ class Command extends BaseCommand
     }
 
     /**
-     * max count result items
+     * at least how many lines would have turned out if there were no LIMIT. Displayed only if the query contains LIMIT
+     * similarly mysql (SQL_CALC_FOUND_ROWS)
      * @return mixed
+     * @throws DbException
      */
     public function getCountAll()
     {
@@ -492,7 +611,15 @@ class Command extends BaseCommand
     }
 
     /**
+     * result format array
+     *   {
+     *      "elapsed": 0.000070241,
+     *       "rows_read": 3,
+     *       "bytes_read": 24
+     *   }
+     *
      * @return mixed
+     * @throws DbException
      */
     public function getStatistics()
     {
@@ -531,7 +658,7 @@ class Command extends BaseCommand
      * @param null $columns columns default columns get schema table
      * @param array $files list files
      * @param string $format file format
-     * @return \yii\httpclient\Response[]
+     * @return Response[]
      */
     public function batchInsertFiles($table, $columns = null, $files = [], $format = 'CSV')
     {
@@ -574,7 +701,7 @@ class Command extends BaseCommand
      * @param array $files
      * @param string $format
      * @param int $size
-     * @return \yii\httpclient\Response[]
+     * @return Response[]
      */
     public function batchInsertFilesDataSize($table, $columns = null, $files = [], $format = 'CSV', $size = 10000)
     {

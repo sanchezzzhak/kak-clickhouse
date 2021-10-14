@@ -19,6 +19,10 @@ use yii\db\Exception as DbException;
  * @method getExtremes() array
  * @method getRows() int
  * @method getMeta() array
+ * @method getSummary() array
+ * @method getQueryId() string|null
+ * @method getTimezone() string|null
+ * @method getServerName() string|null
  */
 class Query extends BaseQuery
 {
@@ -228,10 +232,15 @@ class Query extends BaseQuery
 
     public function __call($name, $params)
     {
-        $methods = ['getmeta', 'getdata', 'getextremes', 'gettotals', 'getcountall', 'getrows'];
+        $methods = [
+            'getmeta', 'getdata', 'getextremes', 'gettotals', 'getcountall', 'getrows'.
+            'getsummary', 'getqueryid', 'gettimezone', 'getservername'
+        ];
+
         if (in_array(strtolower($name), $methods)) {
             return $this->callSpecialCommand($name);
         }
+
         return parent::__call($name, $params);
     }
 
@@ -295,7 +304,7 @@ class Query extends BaseQuery
      */
     public function each($batchSize = 100, $db = null)
     {
-        return  \Yii::createObject([
+        return \Yii::createObject([
             'class' => BatchQueryResult::class,
             'query' => $this,
             'batchSize' => $batchSize,

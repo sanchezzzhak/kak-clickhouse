@@ -38,6 +38,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
         Schema::TYPE_BINARY => 'String',
         Schema::TYPE_BOOLEAN => 'Int8',
         Schema::TYPE_MONEY => 'Float32',
+        Schema::TYPE_ARRAY => 'Array',
     ];
 
     private function prepareFromByModel($query)
@@ -98,7 +99,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
             $sql .= $this->separator . $orderBy;
         }
         $limitBy = $this->buildLimitBy($query->limitBy);
-        if($limitBy !==''){
+        if ($limitBy !== '') {
             $sql .= $this->separator . $limitBy;
         }
         $limit = $this->buildLimit($query->limit, $query->offset);
@@ -240,7 +241,9 @@ class QueryBuilder extends \yii\db\QueryBuilder
 
         if (isset($this->typeMap[$type])) {
             return $this->typeMap[$type];
-        } elseif (preg_match('/^(\w+)\s+/', $type, $matches)) {
+        }
+
+        if (preg_match('/^(\w+)\s+/', $type, $matches)) {
             if (isset($this->typeMap[$matches[1]])) {
                 return preg_replace('/^\w+/', $this->typeMap[$matches[1]], $type);
             }
@@ -329,6 +332,14 @@ class QueryBuilder extends \yii\db\QueryBuilder
             . $this->getColumnType($type);
     }
 
+    public function insert($table, $columns, &$params)
+    {
+        list($names, $placeholders, $values, $params) = $this->prepareInsertValues($table, $columns, $params);
+        return 'INSERT INTO ' . $this->db->quoteTableName($table)
+            . (!empty($names) ? ' (' . implode(', ', $names) . ')' : '')
+            . (!empty($placeholders) ? ' VALUES (' . implode(', ', $placeholders) . ')' : $values);
+    }
+
 
     protected function prepareInsertValues($table, $columns, $params = [])
     {
@@ -344,9 +355,12 @@ class QueryBuilder extends \yii\db\QueryBuilder
             foreach ($columns as $name => $value) {
                 $names[] = $schema->quoteColumnName($name);
 
-                if(isset($columnSchemas[$name]) && $columnSchemas[$name]->type === 'bigint'){
+                // array
+                if(preg_match('~Array\(~i', $columnSchemas[$name]->dbType)) {
+                    $value = new Expression(json_encode($value));
+                } else if(isset($columnSchemas[$name]) && $columnSchemas[$name]->type === 'bigint'){
                     $value = new Expression($value);
-                } else{
+                } else {
                     $value = isset($columnSchemas[$name]) ? $columnSchemas[$name]->dbTypecast($value) : $value;
                 }
 
@@ -388,13 +402,16 @@ class QueryBuilder extends \yii\db\QueryBuilder
         $values = [];
         foreach ($rows as $row) {
             $vs = [];
-            foreach ($row as $i => $value) {
+            foreach ($row as $i => &$value) {
 
                 if (isset($columns[$i], $columnSchemas[$columns[$i]])) {
-                    $value = $columnSchemas[$columns[$i]]->dbTypecast($value);
-
-                    if(in_array($columnSchemas[$columns[$i]]->type, ['bigint'])){
-                        $value = new Expression($value);
+                    if(preg_match('~Array\(~i', $columnSchemas[$columns[$i]]->dbType)) {
+                        $value = new Expression(json_encode($value));
+                    } else {
+                        $value = $columnSchemas[$columns[$i]]->dbTypecast($value);
+                        if(in_array($columnSchemas[$columns[$i]]->type, ['bigint'])){
+                            $value = new Expression($value);
+                        }
                     }
                 }
 
@@ -411,6 +428,9 @@ class QueryBuilder extends \yii\db\QueryBuilder
             }
             $values[] = '(' . implode(', ', $vs) . ')';
         }
+
+        var_dump($values);
+
         if (empty($values)) {
             return '';
         }

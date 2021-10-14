@@ -21,7 +21,7 @@ class ActiveRecord extends \yii\db\ActiveRecord
      */
     public static function find()
     {
-        return Yii::createObject(ActiveQuery::className(), [get_called_class()]);
+        return Yii::createObject(ActiveQuery::class, [get_called_class()]);
     }
 
     /**
@@ -65,6 +65,7 @@ class ActiveRecord extends \yii\db\ActiveRecord
             Yii::info('Model not inserted due to validation error.', __METHOD__);
             return false;
         }
+
         if (!$this->beforeSave(true)) {
             return false;
         }

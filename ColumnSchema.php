@@ -36,11 +36,6 @@ class ColumnSchema extends BaseColumnSchema
             return null;
         }
 
-        if(preg_match('~Array\(~', $this->dbType) && is_array($value)) {
-//            var_dump($this, $value);
-            return json_encode($value);
-        }
-
         if ($value === null
             || gettype($value) === $this->phpType
             || $value instanceof ExpressionInterface
@@ -48,7 +43,6 @@ class ColumnSchema extends BaseColumnSchema
         ) {
             return $value;
         }
-
         if (is_array($value)
             && count($value) === 2
             && isset($value[1])
@@ -79,6 +73,14 @@ class ColumnSchema extends BaseColumnSchema
         }
 
         return $value;
+    }
+
+    /**
+     * todo test
+     * @return array|int[]
+     */
+    public function getPdoParamTypes() {
+        return [];
     }
 
 }

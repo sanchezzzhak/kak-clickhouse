@@ -4,11 +4,15 @@ namespace kak\clickhouse;
 
 
 use Yii;
+use yii\db\Expression;
 use yii\db\TableSchema;
 use yii\helpers\ArrayHelper;
 
 class Schema extends \yii\db\Schema
 {
+    public const TYPE_ARRAY = 'array';
+
+
     /** @var $db Connection */
     public $db;
 
@@ -65,13 +69,33 @@ class Schema extends \yii\db\Schema
      * Executes the INSERT command, returning primary key values.
      * @param string $table the table that new rows will be inserted into.
      * @param array $columns the column data (name => value) to be inserted into the table.
-     * @return array primary key values or false if the command fails
-     * @since 2.0.4
+     * @return bool|array
      */
     public function insert($table, $columns)
     {
-        $columns = $this->hardTypeCastValue($table, $columns);
-        return parent::insert($table, $columns);
+        $columns = $this->hardTypeCastValue($table, $columns, true);
+        $command = $this->db->createCommand()->insert($table, $columns);
+        $response = $command->execute();
+        if (!$response->isOk) {
+            return false;
+        }
+
+        $tableSchema = $this->getTableSchema($table);
+        if ($tableSchema === null) {
+            return false;
+        }
+
+        $result = [];
+        foreach ($tableSchema->primaryKey as $name) {
+            if ($tableSchema->columns[$name]->autoIncrement) {
+                $result[$name] = $this->getLastInsertID($tableSchema->sequenceName);
+                break;
+            }
+
+            $result[$name] = $columns[$name] ?? $tableSchema->columns[$name]->defaultValue;
+        }
+
+        return $result;
     }
 
     /**
@@ -80,12 +104,24 @@ class Schema extends \yii\db\Schema
      * @param $columns
      * @return mixed
      */
-    protected function hardTypeCastValue($table, $columns)
+    protected function hardTypeCastValue($table, $columns, $upstert = false)
     {
         $tableSchema = $this->getTableSchema($table);
+
+        if ($tableSchema === null) {
+            return $columns;
+        }
+
         foreach ($columns as $name => $value) {
+            if ($upstert) {
+                if (preg_match('~Array\(~i', $tableSchema->columns[$name]->dbType)) {
+                    $columns[$name] = new Expression(json_encode($value));
+                    continue;
+                }
+            }
             $columns[$name] = $tableSchema->columns[$name]->phpTypecast($value);
         }
+
         return $columns;
     }
 
@@ -165,7 +201,7 @@ class Schema extends \yii\db\Schema
      */
     protected function loadTableSchema($name)
     {
-        $database = $this->db->database === null ? 'default' : $this->db->database;
+        $database = $this->db->database ?? 'default';
 
         if (stripos($name, '.') !== false) {
             $schemaData = explode('.', $name);
@@ -205,8 +241,7 @@ class Schema extends \yii\db\Schema
         $column = $this->createColumnSchema();
         $column->name = $info['name'];
         $column->dbType = $info['type'];
-        $column->type = isset($this->typeMap[$column->dbType]) ? $this->typeMap[$column->dbType] : self::TYPE_STRING;
-
+        $column->type = $this->typeMap[$column->dbType] ?? self::TYPE_STRING;
 
         if (preg_match('/^([\w ]+)(?:\(([^\)]+)\))?$/', $column->dbType, $matches)) {
             $type = $matches[1];
@@ -217,7 +252,7 @@ class Schema extends \yii\db\Schema
         }
 
         $unsignedTypes = ['UInt8', 'UInt16', 'UInt32', 'UInt64'];
-        if(in_array($column->dbType, $unsignedTypes)) {
+        if (in_array($column->dbType, $unsignedTypes, true)) {
             $column->unsigned = true;
         }
 
@@ -234,6 +269,6 @@ class Schema extends \yii\db\Schema
      */
     protected function createColumnSchema()
     {
-        return Yii::createObject('kak\clickhouse\ColumnSchema');
+        return Yii::createObject(ColumnSchema::class);
     }
 }
