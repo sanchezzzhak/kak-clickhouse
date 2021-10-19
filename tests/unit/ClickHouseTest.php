@@ -47,7 +47,8 @@ class ClickHouseTest extends Unit
                 `test_ipv4` IPv4,
                 `test_ipv6` IPv6,
                 `test_uuid` UUID,
-                `test_array` Array(Array(Array(Nullable(Int32))))
+                `test_array` Array(Array(Array(Nullable(Int32)))),
+                `test_map` Map(String, UInt64),
             ) ENGINE = MergeTree(event_date, (event_date, user_id), 8192);')
             ->execute();
     }
@@ -104,11 +105,15 @@ class ClickHouseTest extends Unit
 
         $this->assertTrue($model->save());
 
-        $findModel = TestTableModel::findOne([
-            'user_id' => $model->user_id,
-            'time' => $model->time,
-            'test_uuid' => $model->test_uuid
-        ]);
+        $query = TestTableModel::find()
+            ->where([
+                'user_id' => $model->user_id,
+                'time' => $model->time,
+                'test_uuid' => $model->test_uuid,
+                'test_int64' => '9223372036854775807'
+            ]);
+
+        $findModel = $query->one();
 
         $this->assertNotNull($findModel, 'find model not found');
         $this->assertEquals($findModel->event_date, $model->event_date);

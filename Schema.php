@@ -21,17 +21,20 @@ class Schema extends \yii\db\Schema
         'UInt16' => self::TYPE_INTEGER,
         'UInt32' => self::TYPE_INTEGER,
         'UInt64' => self::TYPE_BIGINT,
+        'UInt256' => self::TYPE_BIGINT,
         'Int8' => self::TYPE_SMALLINT,
         'Int16' => self::TYPE_INTEGER,
         'Int32' => self::TYPE_INTEGER,
         'Int64' => self::TYPE_BIGINT,
+        'Int256' => self::TYPE_BIGINT,
         'Float32' => self::TYPE_FLOAT,
         'Float64' => self::TYPE_FLOAT,
         'String' => self::TYPE_STRING,
         'FixedString' => self::TYPE_CHAR,
         'Date' => self::TYPE_DATE,
-//        'Date32' => self::TYPE_DATE,
+        'Date32' => self::TYPE_DATE,
         'DateTime' => self::TYPE_DATETIME,
+        'DateTime64' => self::TYPE_DATETIME,
         'Enum' => self::TYPE_STRING,
         'Enum8' => self::TYPE_STRING,
         'Enum16' => self::TYPE_STRING,
@@ -43,10 +46,12 @@ class Schema extends \yii\db\Schema
         'Nullable(UInt16)' => self::TYPE_INTEGER,
         'Nullable(UInt32)' => self::TYPE_INTEGER,
         'Nullable(UInt64)' => self::TYPE_BIGINT,
+        'Nullable(UInt256)' => self::TYPE_BIGINT,
         'Nullable(Int8)' => self::TYPE_SMALLINT,
         'Nullable(Int16)' => self::TYPE_INTEGER,
         'Nullable(Int32)' => self::TYPE_INTEGER,
         'Nullable(Int64)' => self::TYPE_BIGINT,
+        'Nullable(Int256)' => self::TYPE_BIGINT,
         'Nullable(Float32)' => self::TYPE_FLOAT,
         'Nullable(Float64)' => self::TYPE_FLOAT,
         'Nullable(String)' => self::TYPE_STRING,
@@ -58,7 +63,9 @@ class Schema extends \yii\db\Schema
         'Nullable(Enum16)' => self::TYPE_STRING,
 
         'Array' => self::TYPE_ARRAY,
-        //'Tuple' => null,
+        'Map' => self::TYPE_ARRAY,
+        'Tuple' => self::TYPE_ARRAY,
+
         //'Nested' => null,
     ];
 
@@ -236,7 +243,7 @@ class Schema extends \yii\db\Schema
         $column->dbType = $info['type'];
         $column->type = $this->typeMap[$column->dbType] ?? self::TYPE_STRING;
 
-        if (preg_match('/^([\w ]+)(?:\(([^\)]+)\))?$/', $column->dbType, $matches)) {
+        if (preg_match('/^([\w ]+)(?:\(([^)]+)\))?$/', $column->dbType, $matches)) {
             $type = $matches[1];
             $column->dbType = $matches[1] . (isset($matches[2]) ? "({$matches[2]})" : '');
             if (isset($this->typeMap[$type])) {
@@ -244,7 +251,7 @@ class Schema extends \yii\db\Schema
             }
         }
 
-        $unsignedTypes = ['UInt8', 'UInt16', 'UInt32', 'UInt64'];
+        $unsignedTypes = ['UInt8', 'UInt16', 'UInt32', 'UInt64', 'UInt256'];
         if (in_array($column->dbType, $unsignedTypes, true)) {
             $column->unsigned = true;
         }

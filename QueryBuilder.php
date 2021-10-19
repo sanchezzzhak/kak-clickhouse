@@ -375,7 +375,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
                 $names[] = $schema->quoteColumnName($name);
                 /** @var ColumnSchema $columnSchema */
                 $columnSchema = $columnSchemas[$name];
-                $value = $columnSchema->dbTypecast($value, true);
+                $value = $columnSchema->dbTypecastInsert($value);
 
                 if ($value instanceof ExpressionInterface) {
                     $placeholders[] = $this->buildExpression($value, $params);
@@ -416,7 +416,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
         foreach ($rows as $row) {
             $vs = [];
             foreach ($row as $i => $value) {
-                $value = $columnSchemas[$columns[$i]]->dbTypecast($value, true);
+                $value = $columnSchemas[$columns[$i]]->dbTypecastInsert($value);
                 if (is_string($value)) {
                     $value = $schema->quoteValue($value);
                 } elseif ($value === false) {
