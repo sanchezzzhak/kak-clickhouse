@@ -651,8 +651,12 @@ class Command extends BaseCommand
         return $this->setSql($sql);
     }
 
+    /**
+     * @return void
+     * @throws DbException
+     */
     public function query()
     {
-        throw new \yii\db\Exception('Clichouse unsupport cursor');
+        throw new \yii\db\Exception('Clickhouse unsupported cursor');
     }
 }
