@@ -19,6 +19,7 @@
         "yiisoft/yii2-httpclient": "^2.0.14"
     },
     "require-dev": {
+      "symfony/event-dispatcher-contract": "2.2.0",
       "codeception/codeception": "4.1.22",
       "codeception/module-asserts": "1.3",
       "codeception/module-yii2": "1.1"
