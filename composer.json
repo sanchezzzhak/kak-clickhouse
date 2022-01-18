@@ -19,10 +19,9 @@
         "yiisoft/yii2-httpclient": "^2.0.14"
     },
     "require-dev": {
-        "codeception/codeception": "*",
+        "codeception/codeception": "4.1.8",
         "codeception/module-asserts": "*",
-        "codeception/module-yii2": "*",
-        "codeception/stub": "3.5.0"
+        "codeception/module-yii2": "1.1.5"
     },
     "autoload": {
         "psr-4": {
