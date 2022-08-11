@@ -254,10 +254,12 @@ class ClickHouseTest extends Unit
     public function testUnionQuery()
     {
         $query = TestTableModel::find()->select(['t' => 'time']);
-        $query->union(TestTableModel::find()->select(['t' => 'user_id']), true);
-        $result = "SELECT time AS t FROM test_stat UNION ALL SELECT user_id AS t FROM test_stat";
+        $query->union(TestTableModel::find()->select(['t' => 'user_id']), 'all');
+        $query->union(TestTableModel::find()->select(['e' => 'event_date']), 'distinct');
+        $query->union(TestTableModel::find()->select(['en' => 'test_enum']));
+        $result = "SELECT time AS t FROM test_stat UNION ALL SELECT user_id AS t FROM test_stat UNION DISTINCT SELECT event_date AS e FROM test_stat UNION SELECT test_enum AS en FROM test_stat";
         $sql = $query->createCommand($this->getDb())->getRawSql();
-        $this->assertTrue($sql === $result, 'Simple union case');
+        $this->assertSame($sql, $result, 'Simple union case');
     }
 
     public function testWithRollupQuery()

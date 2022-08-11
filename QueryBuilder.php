@@ -294,7 +294,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
             return '';
         }
 
-        $result = '';
+        $result = [];
 
         foreach ($unions as $i => $union) {
             $query = $union['query'];
@@ -302,13 +302,22 @@ class QueryBuilder extends \yii\db\QueryBuilder
                 list($unions[$i]['query'], $params) = $this->build($query, $params);
             }
 
-            $result .= sprintf('UNION %s %s' ,
-                $union['all'] ? 'ALL ' : '',
+            $unionType = $union['all'];
+            $unionCondition = '';
+            if (is_string($unionType) && strtolower($unionType) === 'distinct') {
+                $unionCondition = 'DISTINCT ';
+            }
+            if ($unionType === true || (is_string($unionType) && strtolower($unionType) === 'all')) {
+                $unionCondition = 'ALL ';
+            }
+
+            $result[] = sprintf('UNION %s%s' ,
+                $unionCondition,
                 $unions[$i]['query']
             );
         }
 
-        return trim($result);
+        return implode(" ", $result);
     }
 
     /**
