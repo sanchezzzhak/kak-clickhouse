@@ -304,5 +304,18 @@ class Query extends BaseQuery
         ]);
     }
 
+    /**
+     * Appends a SQL statement using UNION operator.
+     * @param string|Query $sql the SQL statement to be appended using UNION
+     * @param mixed $all - is value TRUE if using UNION ALL and FALSE if using UNION
+     * or support string type ('ALL', 'DISTINCT')
+     * @return $this the query object itself
+     */
+    public function union($sql, $all = false)
+    {
+        $this->union[] = ['query' => $sql, 'all' => $all];
+        return $this;
+    }
+
 
 }

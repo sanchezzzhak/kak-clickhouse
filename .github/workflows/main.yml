@@ -39,8 +39,15 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: composer:v2
           extensions: memcached
-      - name: "Composer install"
+      - name: "Composer install for php 7.3...7.4"
+        if: matrix.php-version == '7.3' || matrix.php-version == '7.4'
         run: |
+          composer config --no-plugins allow-plugins.yiisoft/yii2-composer false
+          composer install
+      - name: "Composer install for php 8.0"
+        if: matrix.php-version == '8.0'
+        run: |
+          composer config --no-plugins allow-plugins.yiisoft/yii2-composer false
           composer install --ignore-platform-reqs
       - name: PHPCodecept / PHP ${{ matrix.php-version }}
         run: |
