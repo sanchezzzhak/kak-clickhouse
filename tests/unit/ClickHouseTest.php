@@ -28,8 +28,6 @@ class ClickHouseTest extends Unit
      */
     protected $tester;
 
-
-
     protected function _before()
     {
         $db = $this->getDb();
@@ -62,6 +60,8 @@ class ClickHouseTest extends Unit
             ) ENGINE = MergeTree(event_date, (event_date, user_id), 8192);')
                 ->execute();
 
+            $db->createCommand('TRUNCATE TABLE IF EXISTS `test_stat`')->execute();
+
             $db->createCommand()->insert('test_stat', [
                 'event_date' => date('Y-m-d'),
                 'user_id' => 5
@@ -69,7 +69,7 @@ class ClickHouseTest extends Unit
 
             $db->createCommand()->insert('test_stat', [
                 'event_date' => date('Y-m-d', strtotime('-1 days')),
-                'time' => time(),
+                'time' => time() - 3600,
                 'user_id' => 5
             ])->execute();
 
