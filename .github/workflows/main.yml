@@ -41,7 +41,8 @@ jobs:
           extensions: memcached
       - name: "Composer install"
         run: |
-          composer install --ignore-platform-reqs
+          composer config --no-plugins allow-plugins.yiisoft/yii2-composer false
+          composer install
       - name: PHPCodecept / PHP ${{ matrix.php-version }}
         run: |
           php -v
