@@ -70,7 +70,19 @@ class Schema extends \yii\db\Schema
      */
     public function insert($table, $columns)
     {
+
+        foreach($columns as &$column){
+
+            if(is_array($column)){
+
+                $column = json_encode($column);
+            }
+        }
+
+        unset($column);
+
         $columns = $this->hardTypeCastValue($table, $columns);
+
         return parent::insert($table, $columns);
     }
 
