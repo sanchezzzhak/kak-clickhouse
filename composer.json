@@ -15,6 +15,7 @@
         }
     ],
     "require": {
+        "php": ">=7.3.0",
         "yiisoft/yii2": "*",
         "yiisoft/yii2-httpclient": "^2.0.14"
     },
@@ -33,6 +34,9 @@
         "process-timeout": 1800,
         "fxp-asset": {
             "enabled": false
+        },
+        "allow-plugins": {
+            "yiisoft/yii2-composer": false
         }
     },
     "repositories": [

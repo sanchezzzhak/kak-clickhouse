@@ -2,6 +2,7 @@
 
 namespace kak\clickhouse;
 
+use Iterator;
 use yii\base\BaseObject;
 
 /**
@@ -23,7 +24,7 @@ use yii\base\BaseObject;
  * Class BatchQueryResult
  * @package kak\clickhouse
  */
-class BatchQueryResult  extends BaseObject implements \Iterator
+class BatchQueryResult extends BaseObject implements Iterator
 {
     /**
      * @var Connection the DB connection to be used when performing batch query.
@@ -73,7 +74,7 @@ class BatchQueryResult  extends BaseObject implements \Iterator
      * Resets the batch query.
      * This method will clean up the existing batch query so that a new batch query can be performed.
      */
-    public function reset()
+    public function reset(): void
     {
         $this->batch = null;
         $this->value = null;
@@ -85,7 +86,7 @@ class BatchQueryResult  extends BaseObject implements \Iterator
      * Resets the iterator to the initial state.
      * This method is required by the interface [[\Iterator]].
      */
-    public function rewind()
+    public function rewind(): void
     {
         $this->reset();
         $this->next();
@@ -95,9 +96,9 @@ class BatchQueryResult  extends BaseObject implements \Iterator
      * Moves the internal pointer to the next dataset.
      * This method is required by the interface [[\Iterator]].
      */
-    public function next()
+    public function next(): void
     {
-        if ($this->batch === null || !$this->each || $this->each && next($this->batch) === false) {
+        if ($this->batch === null || !$this->each || ($this->each && next($this->batch) === false)) {
             $this->batch = $this->fetchData();
             reset($this->batch);
         }
@@ -121,7 +122,7 @@ class BatchQueryResult  extends BaseObject implements \Iterator
      * Fetches the next batch of data.
      * @return array the data fetched
      */
-    protected function fetchData()
+    protected function fetchData(): array
     {
         $command = $this->query->createCommand($this->db);
 
@@ -138,7 +139,7 @@ class BatchQueryResult  extends BaseObject implements \Iterator
     /**
      * Returns the index of the current dataset.
      * This method is required by the interface [[\Iterator]].
-     * @return int the index of the current row.
+     * @return int|string the index of the current row.
      */
     public function key()
     {
@@ -160,7 +161,7 @@ class BatchQueryResult  extends BaseObject implements \Iterator
      * This method is required by the interface [[\Iterator]].
      * @return bool whether there is a valid dataset at the current position.
      */
-    public function valid()
+    public function valid(): bool
     {
         return !empty($this->batch);
     }

@@ -315,9 +315,12 @@ $config['bootstrap'][] = 'debug';
 Using SqlDataProvider
 =====================
 ```php
+use \kak\clickhouse\data\SqlDataProvider;
+
 $sql = 'select * from stat where counter_id=:counter_id and event_date=:date';
-$provider = new \kak\clickhouse\data\SqlDataProvider([
+$provider = new SqlDataProvider([
     'db' => 'clickhouse',
+    'countMode' => SqlDataProvider::COUNT_BEFORE_LIMIT,  // default value
     'sql' => $sql,
     'params' => [
         ':counter_id' => 1,
