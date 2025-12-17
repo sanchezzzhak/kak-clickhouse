@@ -72,7 +72,7 @@ class SqlDataProvider extends \yii\data\SqlDataProvider
         }
 
         if ($pagination !== false) {
-            if (!$page = (int)\Yii::$app->request->get($pagination->pageParam,0)) {
+            if (!$page = (int)\Yii::$app->request->get($pagination->pageParam,1)) {
                 $page = 1;
             }
             $pagination->totalCount = $page * $pagination->getPageSize();
@@ -81,9 +81,10 @@ class SqlDataProvider extends \yii\data\SqlDataProvider
         }
 
         $sql = $this->db->getQueryBuilder()->buildOrderByAndLimit($sql, $orders, $limit, $offset);
-
         $this->command = $this->db->createCommand($sql, $this->params);
-        return $this->command->queryAll();
+        $result = $this->command->queryAll();
+        $this->prepareTotalCount();
+        return $result;
     }
 
 
