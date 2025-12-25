@@ -129,7 +129,7 @@ class Command extends BaseCommand
         foreach ($values as $name => $value) {
             if (is_array($value)) {
                 $this->_pendingParams[$name] = $value;
-                $this->params[$name] = $value[0];
+                $this->params[$name] = isset($value[0]) ? $value[0] : '[]';
             } else {
                 $this->params[$name] = $value;
             }
@@ -248,7 +248,7 @@ class Command extends BaseCommand
                 }
             }
         }
-        
+
         $token = $rawSql;
         try {
             Yii::beginProfile($token, 'kak\clickhouse\Command::query');
