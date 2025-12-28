@@ -60,6 +60,14 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
+     * @inheritdoc
+     */
+    public function lightweightDelete($table, $condition, &$params)
+    {
+        return parent::delete($table, $condition, &$params);
+    }
+
+    /**
      * Generates a SELECT SQL statement from a [[Query]] object.
      * @param Query $query the [[Query]] object from which the SQL statement will be generated.
      * @param array $params the parameters to be bound to the generated SQL statement. These parameters will
